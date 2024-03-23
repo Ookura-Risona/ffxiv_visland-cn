@@ -43,7 +43,7 @@ public class GatherWindow : Window, System.IDisposable
     private string searchString = string.Empty;
     private readonly List<Route> FilteredRoutes = [];
 
-    public GatherWindow() : base("Gathering Automation", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
+    public GatherWindow() : base("采集自动化", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
     {
         Size = new Vector2(800, 800);
         SizeCondition = ImGuiCond.FirstUseEver;
@@ -62,7 +62,7 @@ public class GatherWindow : Window, System.IDisposable
         using var tabs = ImRaii.TabBar("Tabs");
         if (tabs)
         {
-            using (var tab = ImRaii.TabItem("Routes"))
+            using (var tab = ImRaii.TabItem("路线"))
                 if (tab)
                 {
                     DrawExecution();
@@ -89,28 +89,28 @@ public class GatherWindow : Window, System.IDisposable
 
     private void DrawExecution()
     {
-        ImGui.Text("Status: ");
+        ImGui.Text("状态: ");
         ImGui.SameLine();
 
         if (Exec.CurrentRoute != null)
-            Utils.FlashText($"{(Exec.Paused ? "PAUSED" : Exec.Waiting ? "WAITING" : "RUNNING")}", new Vector4(1.0f, 1.0f, 1.0f, 1.0f), Exec.Paused ? new Vector4(1.0f, 0.0f, 0.0f, 1.0f) : new Vector4(0.0f, 1.0f, 0.0f, 1.0f), 2);
+            Utils.FlashText($"{(Exec.Paused ? "暂停中" : Exec.Waiting ? "等待中" : "运行中")}", new Vector4(1.0f, 1.0f, 1.0f, 1.0f), Exec.Paused ? new Vector4(1.0f, 0.0f, 0.0f, 1.0f) : new Vector4(0.0f, 1.0f, 0.0f, 1.0f), 2);
         ImGui.SameLine();
         
         if (Exec.CurrentRoute == null || Exec.CurrentWaypoint >= Exec.CurrentRoute.Waypoints.Count)
         {
-            ImGui.Text("Route not running");
+            ImGui.Text("当前无运行中路线");
             return;
         }
 
         if (Exec.CurrentRoute != null) // Finish() call could've reset it
         {
             ImGui.SameLine();
-            ImGui.Text($"{Exec.CurrentRoute.Name}: Step #{Exec.CurrentWaypoint + 1}");
+            ImGui.Text($"{Exec.CurrentRoute.Name}: 步骤 #{Exec.CurrentWaypoint + 1}");
 
             if (Exec.Waiting)
             {
                 ImGui.SameLine();
-                ImGui.Text($"waiting {Exec.WaitUntil - System.Environment.TickCount64}ms");
+                ImGui.Text($"等待 {Exec.WaitUntil - System.Environment.TickCount64}ms");
             }
         }
     }
@@ -121,11 +121,11 @@ public class GatherWindow : Window, System.IDisposable
         {
             if (ImGuiComponents.IconButton(FontAwesomeIcon.Plus))
             {
-                RouteDB.Routes.Add(new() { Name = "Unnamed Route" });
+                RouteDB.Routes.Add(new() { Name = "未命名路线" });
                 RouteDB.NotifyModified();
             }
 
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Create a New Route");
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("创建");
             ImGui.SameLine();
 
             if (ImGuiComponents.IconButton(FontAwesomeIcon.FileImport))
@@ -138,13 +138,12 @@ public class GatherWindow : Window, System.IDisposable
                 }
                 catch (JsonReaderException ex)
                 {
-                    Service.ChatGui.PrintError($"Failed to import route: {ex.Message}");
-                    Service.Log.Error(ex, "Failed to import route");
+                    Service.ChatGui.PrintError($"导入路线失败: {ex.Message}");
                 }
             }
             if (ImGui.IsItemHovered())
             {
-                ImGui.SetTooltip("Import Route from Clipboard (\uE052 Base64)");
+                ImGui.SetTooltip("从剪贴板导入路线 (\uE052 Base64)");
                 if (ImGui.IsMouseClicked(ImGuiMouseButton.Right))
                 {
                     try
@@ -155,8 +154,7 @@ public class GatherWindow : Window, System.IDisposable
                     }
                     catch (JsonReaderException ex)
                     {
-                        Service.ChatGui.PrintError($"Failed to import route: {ex.Message}");
-                        Service.Log.Error(ex, "Failed to import route");
+                        Service.ChatGui.PrintError($"导入路线失败: {ex.Message}");
                     }
                 }
             }
@@ -168,9 +166,9 @@ public class GatherWindow : Window, System.IDisposable
             }
             DrawRouteSettingsPopup();
             ImGui.SameLine();
-            if (ImGui.Checkbox("Stop Route on Error", ref RouteDB.DisableOnErrors))
+            if (ImGui.Checkbox("发生错误时停止路线", ref RouteDB.DisableOnErrors))
                 RouteDB.NotifyModified();
-            ImGuiComponents.HelpMarker("Stops executing a route when you encounter a node you can't gather from due to full inventory.");
+            ImGuiComponents.HelpMarker("因物品达到上限而无法采集时, 停止路线运行");
 
             ImGuiEx.TextV("Search: ");
             ImGui.SameLine();
@@ -196,7 +194,7 @@ public class GatherWindow : Window, System.IDisposable
                 {
                     var routeSource = FilteredRoutes.Count > 0 ? FilteredRoutes : RouteDB.Routes;
                     var route = routeSource[i];
-                    var selectedRoute = ImGui.Selectable($"{route.Name} ({route.Waypoints.Count} steps)###{i}", i == selectedRouteIndex);
+                    var selectedRoute = ImGui.Selectable($"{route.Name} (共 {route.Waypoints.Count} 步)###{i}", i == selectedRouteIndex);
                     if (selectedRoute)
                         selectedRouteIndex = i;
                 }
@@ -209,11 +207,11 @@ public class GatherWindow : Window, System.IDisposable
         using var popup = ImRaii.Popup("Advanced Options");
         if (popup.Success)
         {
-            if (ImGui.SliderFloat("Default Waypoint Radius", ref RouteDB.DefaultWaypointRadius, 0, 100))
+            if (ImGui.SliderFloat("默认步骤半径", ref RouteDB.DefaultWaypointRadius, 0, 100))
                 RouteDB.NotifyModified();
-            if (ImGui.SliderFloat("Default Interaction Radius", ref RouteDB.DefaultInteractionRadius, 0, 100))
+            if (ImGui.SliderFloat("默认交互半径", ref RouteDB.DefaultInteractionRadius, 0, 100))
                 RouteDB.NotifyModified();
-            if (ImGui.Checkbox("Auto Enable Gather Mode on Route Start", ref RouteDB.GatherModeOnStart))
+            if (ImGui.Checkbox("开始时自动切换至采集模式", ref RouteDB.GatherModeOnStart))
                 RouteDB.NotifyModified();
         }
     }
@@ -231,7 +229,7 @@ public class GatherWindow : Window, System.IDisposable
             using (ImRaii.Disabled(Exec.CurrentRoute != null))
                 if (ImGuiComponents.IconButton(FontAwesomeIcon.Play))
                     Exec.Start(route, 0, true, loop, route.Waypoints[0].Pathfind);
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Execute Route");
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("运行");
             ImGui.SameLine();
 
             ImGui.PushStyleColor(ImGuiCol.Button, loop ? greenColor : redColor);
@@ -239,19 +237,19 @@ public class GatherWindow : Window, System.IDisposable
             if (ImGuiComponents.IconButton(FontAwesomeIcon.SyncAlt))
                 loop ^= true;
             ImGui.PopStyleColor(2);
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Loop Route");
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("循环");
             ImGui.SameLine();
 
             if (Exec.CurrentRoute != null)
             {
                 if (ImGuiEx.IconButton(Exec.Paused ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause))
                     Exec.Paused = !Exec.Paused;
-                if (ImGui.IsItemHovered()) ImGui.SetTooltip(Exec.Paused ? "Resume" : "Pause");
+                if (ImGui.IsItemHovered()) ImGui.SetTooltip(Exec.Paused ? "继续" : "暂停");
                 ImGui.SameLine();
 
                 if (ImGuiComponents.IconButton(FontAwesomeIcon.Stop))
                     Exec.Finish();
-                if (ImGui.IsItemHovered()) ImGui.SetTooltip("Stop Route");
+                if (ImGui.IsItemHovered()) ImGui.SetTooltip("停止");
                 ImGui.SameLine();
             }
 
@@ -266,7 +264,7 @@ public class GatherWindow : Window, System.IDisposable
                     RouteDB.NotifyModified();
                 }
             }
-            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Delete Route (Hold CTRL)");
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("删除 (按住 CTRL)");
             ImGui.SameLine();
 
             if (ImGuiComponents.IconButton(FontAwesomeIcon.FileExport))
@@ -275,14 +273,14 @@ public class GatherWindow : Window, System.IDisposable
             }
             if (ImGui.IsItemHovered())
             {
-                ImGui.SetTooltip("Export Route (\uE052 Base64)");
+                ImGui.SetTooltip("导出路线 (\uE052 Base64)");
                 if (ImGui.IsMouseClicked(ImGuiMouseButton.Right))
                     ImGui.SetClipboardText(Utils.ToCompressedBase64(route));
             }
 
             var name = route.Name;
             var movementType = Service.Condition[ConditionFlag.InFlight] ? Movement.MountFly : Service.Condition[ConditionFlag.Mounted] ? Movement.MountNoFly : Movement.Normal;
-            ImGuiEx.TextV("Name: ");
+            ImGuiEx.TextV("名称: ");
             ImGui.SameLine();
             if (ImGui.InputText("", ref name, 256))
             {
@@ -300,7 +298,7 @@ public class GatherWindow : Window, System.IDisposable
                     RouteDB.NotifyModified();
                 }
             }
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Add Waypoint: Current Position");
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("+步骤: 移动至当前位置");
             ImGui.SameLine();
             if (ImGuiComponents.IconButton(FontAwesomeIcon.UserPlus))
             {
@@ -312,14 +310,14 @@ public class GatherWindow : Window, System.IDisposable
                     Exec.Start(route, route.Waypoints.Count - 1, false, false);
                 }
             }
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Add Waypoint: Interact with Target");
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("+步骤: 与目标交互");
 
             using (ImRaii.Child("waypoints"))
             {
                 for (var i = 0; i < route.Waypoints.Count; ++i)
                 {
                     var wp = route.Waypoints[i];
-                    foreach (var wn in _tree.Node($"#{i + 1}: [x: {wp.Position.X:f0}, y: {wp.Position.Y:f0}, z: {wp.Position.Z:f0}] ({wp.Movement}){(wp.InteractWithOID != 0 ? $" @ {wp.InteractWithName} ({wp.InteractWithOID:X})" : "")}###{i}", contextMenu: () => ContextMenuWaypoint(route, i)))
+                    foreach (var wn in _tree.Node($"#{i + 1}: [X: {wp.Position.X:f0}, Y: {wp.Position.Y:f0}, Z: {wp.Position.Z:f0}] ({wp.Movement}){(wp.InteractWithOID != 0 ? $" @ {wp.InteractWithName} ({wp.InteractWithOID:X})" : "")}###{i}", contextMenu: () => ContextMenuWaypoint(route, i)))
                     {
                         DrawWaypoint(wp);
                     }
@@ -336,27 +334,27 @@ public class GatherWindow : Window, System.IDisposable
             wp.ZoneID = Service.ClientState.TerritoryType;
             RouteDB.NotifyModified();
         }
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Set Position to Current");
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("设置为当前位置");
         ImGui.SameLine();
-        if (ImGui.InputFloat3("Position", ref wp.Position))
+        if (ImGui.InputFloat3("位置", ref wp.Position))
             RouteDB.NotifyModified();
         if (UICombo.ExcelSheetCombo("##Territory", out TerritoryType? territory, _ => $"{wp.ZoneID}", x => x.PlaceName.Value!.Name, x => Coordinates.HasAetheryteInZone(x.RowId)))
         {
             wp.ZoneID = (int)territory.RowId;
             RouteDB.NotifyModified();
         }
-        if (ImGui.InputFloat("Radius (yalms)", ref wp.Radius))
+        if (ImGui.InputFloat("半径 (y)", ref wp.Radius))
             RouteDB.NotifyModified();
-        if (UICombo.Enum("Movement mode", ref wp.Movement))
+        if (UICombo.Enum("移动模式", ref wp.Movement))
             RouteDB.NotifyModified();
         ImGui.SameLine();
         using (var noNav = ImRaii.Disabled(!Utils.HasPlugin(NavmeshIPC.Name)))
         {
-            if (ImGui.Checkbox("Pathfind?", ref wp.Pathfind))
+            if (ImGui.Checkbox("寻路?", ref wp.Pathfind))
                 RouteDB.NotifyModified();
         }
         if (!Utils.HasPlugin(NavmeshIPC.Name))
-            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip($"This features requires {NavmeshIPC.Name} to be installed.");
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip($"此功能需要安装并启用 {NavmeshIPC.Name}");
 
         if (ImGuiComponents.IconButton(FontAwesomeIcon.UserPlus))
         {
@@ -372,25 +370,25 @@ public class GatherWindow : Window, System.IDisposable
             else
                 wp.InteractWithOID = default;
         }
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Add/Remove target from waypoint");
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("为步骤添加/移除目标");
         ImGui.SameLine();
         if (ImGuiEx.IconButton(FontAwesomeIcon.CommentDots))
         {
             wp.showInteractions ^= true;
             RouteDB.NotifyModified();
         }
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Toggle Interactions");
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("切换交互");
         ImGui.SameLine();
         if (ImGuiEx.IconButton(FontAwesomeIcon.Clock))
         {
             wp.showWaits ^= true;
             RouteDB.NotifyModified();
         }
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Toggle Waits");
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("切换等待");
 
         if (wp.showInteractions)
         {
-            if (UICombo.Enum("Interaction Type", ref wp.Interaction))
+            if (UICombo.Enum("交互方式", ref wp.Interaction))
                 RouteDB.NotifyModified();
             switch (wp.Interaction)
             {
@@ -405,7 +403,7 @@ public class GatherWindow : Window, System.IDisposable
                     break;
                 case InteractionType.UseItem:
                     ImGui.PushItemWidth(100);
-                    if (ImGui.DragInt($"Item {_items.GetRow((uint)wp.ItemID)?.Name}###{nameof(InteractionType.UseItem)}", ref wp.ItemID, 1, Items.First(), Items.Last()))
+                    if (ImGui.DragInt($"物品 {_items.GetRow((uint)wp.ItemID)?.Name}###{nameof(InteractionType.UseItem)}", ref wp.ItemID, 1, Items.First(), Items.Last()))
                         RouteDB.NotifyModified();
                     break;
                 case InteractionType.UseAction:
@@ -433,7 +431,7 @@ public class GatherWindow : Window, System.IDisposable
                         }
                     }
                     if (!Utils.HasPlugin(BossModIPC.Name))
-                        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip($"This features requires {BossModIPC.Name} to be installed.");
+                        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip($"此功能需要安装并启用 {BossModIPC.Name}.");
 
                     if (wp.MobID != default)
                     {
@@ -469,7 +467,7 @@ public class GatherWindow : Window, System.IDisposable
                     break;
                 case InteractionType.EquipRecommendedGear: break;
                 case InteractionType.StartRoute:
-                    if (UICombo.String("Route Name", RouteDB.Routes.Select(r => r.Name).ToArray(), ref wp.RouteName))
+                    if (UICombo.String("路线名称", RouteDB.Routes.Select(r => r.Name).ToArray(), ref wp.RouteName))
                         RouteDB.NotifyModified();
                     break;
             }
@@ -477,26 +475,26 @@ public class GatherWindow : Window, System.IDisposable
 
         if (wp.showWaits)
         {
-            if (ImGui.SliderInt("Wait (ms)", ref wp.WaitTimeMs, 0, 60000))
+            if (ImGui.SliderInt("等待 (ms)", ref wp.WaitTimeMs, 0, 60000))
                 RouteDB.NotifyModified();
-            if (UICombo.Enum("Wait for Condition", ref wp.WaitForCondition))
+            if (UICombo.Enum("等待条件满足", ref wp.WaitForCondition))
                 RouteDB.NotifyModified();
         }
     }
 
     private void ContextMenuWaypoint(Route r, int i)
     {
-        if (ImGui.MenuItem("Execute this step only"))
+        if (ImGui.MenuItem("仅执行此步"))
         {
             Exec.Start(r, i, false, false, r.Waypoints[i].Pathfind);
         }
 
-        if (ImGui.MenuItem("Execute route once starting from this step"))
+        if (ImGui.MenuItem("从此步开始执行路线一次"))
         {
             Exec.Start(r, i, true, false, r.Waypoints[i].Pathfind);
         }
 
-        if (ImGui.MenuItem("Execute route starting from this step and then loop"))
+        if (ImGui.MenuItem("从此步开始循环执行路线"))
         {
             Exec.Start(r, i, true, true, r.Waypoints[i].Pathfind);
         }
@@ -504,7 +502,7 @@ public class GatherWindow : Window, System.IDisposable
         var movementType = Service.Condition[ConditionFlag.InFlight] ? Movement.MountFly : Service.Condition[ConditionFlag.Mounted] ? Movement.MountNoFly : Movement.Normal;
         var target = Service.TargetManager.Target;
 
-        if (ImGui.MenuItem($"Swap to {(r.Waypoints[i].InteractWithOID != default ? "normal waypoint" : "interact waypoint")}"))
+        if (ImGui.MenuItem($"切换至 {(r.Waypoints[i].InteractWithOID != default ? "移动步骤" : "交互步骤")}"))
         {
             _postDraw.Add(() =>
             {
@@ -513,7 +511,7 @@ public class GatherWindow : Window, System.IDisposable
             });
         }
 
-        if (ImGui.MenuItem("Insert step above"))
+        if (ImGui.MenuItem("在上方插入"))
         {
             _postDraw.Add(() =>
             {
@@ -546,7 +544,7 @@ public class GatherWindow : Window, System.IDisposable
             });
         }
 
-        if (ImGui.MenuItem("Insert step below"))
+        if (ImGui.MenuItem("在下方插入"))
         {
             _postDraw.Add(() =>
             {
@@ -579,7 +577,7 @@ public class GatherWindow : Window, System.IDisposable
             });
         }
 
-        if (ImGui.MenuItem("Move up"))
+        if (ImGui.MenuItem("上移"))
         {
             _postDraw.Add(() =>
             {
@@ -595,7 +593,7 @@ public class GatherWindow : Window, System.IDisposable
             });
         }
 
-        if (ImGui.MenuItem("Move down"))
+        if (ImGui.MenuItem("下移"))
         {
             _postDraw.Add(() =>
             {
@@ -611,7 +609,7 @@ public class GatherWindow : Window, System.IDisposable
             });
         }
 
-        if (ImGui.MenuItem("Delete"))
+        if (ImGui.MenuItem("删除"))
         {
             _postDraw.Add(() =>
             {
