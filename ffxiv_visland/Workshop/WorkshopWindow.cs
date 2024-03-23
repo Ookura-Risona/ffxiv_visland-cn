@@ -29,21 +29,19 @@ unsafe class WorkshopWindow : UIAttachedWindow
     public override void Draw()
     {
         using var tabs = ImRaii.TabBar("Tabs");
-        if (tabs)
-        {
-            using (var tab = ImRaii.TabItem("导入 OC 预设"))
-                if (tab)
-                    _oc.Draw();
-            using (var tab = ImRaii.TabItem("手动安排"))
-                if (tab)
-                    _manual.Draw();
-            using (var tab = ImRaii.TabItem("设置"))
-                if (tab)
-                    DrawSettings();
-            using (var tab = ImRaii.TabItem("Debug"))
-                if (tab)
-                    _debug.Draw();
-        }
+        if (!tabs) return;
+        using (var tab = ImRaii.TabItem("导入 OC 预设"))
+            if (tab)
+                _oc.Draw();
+        using (var tab = ImRaii.TabItem("手动安排"))
+            if (tab)
+                _manual.Draw();
+        using (var tab = ImRaii.TabItem("设置"))
+            if (tab)
+                DrawSettings();
+        using (var tab = ImRaii.TabItem("Debug"))
+            if (tab)
+                _debug.Draw();
     }
 
     public override void OnOpen()
