@@ -51,10 +51,29 @@ public unsafe class WorkshopOCImport
                 ImRaii.Disabled(_pendingActions.Count >
                                 0); // disallow any manipulations while delayed actions are in progress
 
-        if (ImGui.Button("从剪贴板导入作业"))
+        if (ImGui.Button("从剪贴板导入 OC 作业"))
             ImportRecsFromClipboard(false);
         ImGuiComponents.HelpMarker("用于从剪贴板导入来自 Overseas Casuals Discord 的工房日程安排\n" +
                                    "原理为检测剪贴板内每一行的物品名 (不包含诸如海岛, 开拓工房之类的前缀词)");
+
+        if (ImGui.Button("从剪贴板导入国服静态作业"))
+        {
+            try
+            {
+                var staticSchedule = Regex.Replace(ImGui.GetClipboardText().Trim(), @"\[[^\]]*\]", "", RegexOptions.Multiline);
+                staticSchedule = staticSchedule.Split('\n').Select(i => "Cycle " + i).Aggregate((i, j) => i + "\n" + j).Replace('、', '\n').Replace('.', '\n');
+                Recommendations = ParseRecs(staticSchedule);
+            }
+            catch (Exception ex)
+            {
+                ReportError($"错误: {ex.Message}");
+            }
+        }
+        ImGuiComponents.HelpMarker("用于从剪贴板导入来自 蜡笔桶 的静态工房日程安排\n" +
+                                   "你可以通过点击本按钮来打开对应的腾讯文档页面");
+
+        if (ImGui.IsItemClicked())
+            Util.OpenLink("https://docs.qq.com/doc/DTUNRZkJjTVhvT2Nv");
 
         if (Recommendations.Empty)
             return;
