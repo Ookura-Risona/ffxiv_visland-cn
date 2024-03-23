@@ -12,7 +12,7 @@ unsafe class GranaryWindow : UIAttachedWindow
     private GranaryConfig _config;
     private GranaryDebug _debug;
 
-    public GranaryWindow() : base("囤货仓库自动化", "MJIGatheringHouse", new(400, 600))
+    public GranaryWindow() : base("屯货仓库自动化", "MJIGatheringHouse", new(400, 600))
     {
         _config = Service.Config.Get<GranaryConfig>();
         _debug = new();
