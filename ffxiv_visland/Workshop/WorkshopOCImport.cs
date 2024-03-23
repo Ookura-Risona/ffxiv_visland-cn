@@ -45,11 +45,10 @@ public unsafe class WorkshopOCImport
     {
         using var globalDisable = ImRaii.Disabled(_pendingActions.Count > 0); // disallow any manipulations while delayed actions are in progress
 
-        if (ImGui.Button("Import Recommendations From Clipboard"))
+        if (ImGui.Button("从剪贴板导入作业"))
             ImportRecsFromClipboard(false);
-        ImGuiComponents.HelpMarker("This is for importing schedules from the Overseas Casuals' Discord from your clipboard.\n" +
-                        "This importer detects the presence of an item's name (not including \"Isleworks\" et al) on each line.\n" +
-                        "You can copy an entire workshop's schedule from the discord, junk included.");
+        ImGuiComponents.HelpMarker("用于从剪贴板导入来自 Overseas Casuals Discord 的工房日程安排\n" +
+                                   "原理为检测剪贴板内每一行的物品名 (不包含诸如海岛, 开拓工房之类的前缀词)");
 
         if (Recommendations.Empty)
             return;
@@ -58,22 +57,22 @@ public unsafe class WorkshopOCImport
 
         if (!_config.UseFavorSolver)
         {
-            ImGui.TextUnformatted("Favours");
-            ImGuiComponents.HelpMarker("Click the \"This Week's Favors\" or \"Next Week's Favors\" button to generate a bot command for the OC discord for your favors.\n" +
-                    "Then click the #bot-spam button to open discord to the channel, paste in the command and copy its output.\n" +
-                    "Finally, click the \"Override 4th workshop\" button to replace the regular recommendations with favor recommendations.");
+            ImGui.TextUnformatted("推荐方案");
+            ImGuiComponents.HelpMarker("点击 \"本周推荐\" 或 \"下周推荐\" 按钮以生成一个用于生成自定义作业的 OC 服务器机器人文本指令.\n" +
+                    "然后点击 #bot-spam 按钮以打开 Discord 并切换到指定频道, 粘贴并发送命令, 然后复制机器人所输出的文本.\n" +
+                    "最后点击 \"Override 4th workshop\" 按钮以将常规推荐换为求解器推荐方案");
 
-            if (ImGuiComponents.IconButtonWithText(Dalamud.Interface.FontAwesomeIcon.Clipboard, "This Week's Favors"))
+            if (ImGuiComponents.IconButtonWithText(Dalamud.Interface.FontAwesomeIcon.Clipboard, "本周推荐"))
                 ImGui.SetClipboardText(CreateFavorRequestCommand(false));
             ImGui.SameLine();
-            if (ImGuiComponents.IconButtonWithText(Dalamud.Interface.FontAwesomeIcon.Clipboard, "Next Week's Favors"))
+            if (ImGuiComponents.IconButtonWithText(Dalamud.Interface.FontAwesomeIcon.Clipboard, "下周推荐"))
                 ImGui.SetClipboardText(CreateFavorRequestCommand(true));
 
             if (ImGui.Button("Overseas Casuals > #bot-spam"))
                 Util.OpenLink("discord://discord.com/channels/1034534280757522442/1034985297391407126");
             if (ImGui.IsItemClicked(ImGuiMouseButton.Right))
                 Util.OpenLink("https://discord.com/channels/1034534280757522442/1034985297391407126");
-            ImGuiComponents.HelpMarker("\uE051: Discord app\n\uE052: Discord in browser");
+            ImGuiComponents.HelpMarker("\uE051: Discord app\n\uE052: Discord 浏览器页面");
 
             if (ImGui.Button("Override 4th workshop with favor schedules from clipboard"))
                 OverrideSideRecsLastWorkshopClipboard();
@@ -84,7 +83,7 @@ public unsafe class WorkshopOCImport
         {
             ImGuiEx.TextV("Override 4th workshop with favors:");
             ImGui.SameLine();
-            if (ImGui.Button($"This Week##4th"))
+            if (ImGui.Button($"本周##4th"))
                 OverrideSideRecsLastWorkshopSolver(false);
             ImGui.SameLine();
             if (ImGui.Button($"Next Week##4th"))
@@ -93,7 +92,7 @@ public unsafe class WorkshopOCImport
             ImGuiEx.TextV("Override closest workshops with favors:");
             ImGui.SameLine();
 
-            if (ImGui.Button($"This Week##asap"))
+            if (ImGui.Button($"本周##asap"))
                 OverrideSideRecsAsapSolver(false);
             ImGui.SameLine();
             if (ImGui.Button($"Next Week##asap"))
@@ -104,13 +103,13 @@ public unsafe class WorkshopOCImport
 
         ImGuiEx.TextV("Set Schedule:");
         ImGui.SameLine();
-        if (ImGui.Button("This Week"))
+        if (ImGui.Button("本周"))
             ApplyRecommendations(false);
         ImGui.SameLine();
-        if (ImGui.Button("Next Week"))
+        if (ImGui.Button("下周"))
             ApplyRecommendations(true);
         ImGui.SameLine();
-        ImGui.Checkbox("Ignore 4th Workshop", ref IgnoreFourthWorkshop);
+        ImGui.Checkbox("忽略四号开拓工房", ref IgnoreFourthWorkshop);
         ImGui.Separator();
 
         DrawCycleRecommendations();
@@ -136,9 +135,9 @@ public unsafe class WorkshopOCImport
         using var scrollSection = ImRaii.Child("ScrollableSection");
         foreach (var (c, r) in Recommendations.Enumerate())
         {
-            ImGuiEx.TextV($"Cycle {c}:");
+            ImGuiEx.TextV($"周期 {c}:");
             ImGui.SameLine();
-            if (ImGui.Button($"Set on Active Cycle##{c}"))
+            if (ImGui.Button($"设置为活动周期##{c}"))
                 ApplyRecommendationToCurrentCycle(r);
 
             using var outerTable = ImRaii.Table($"table_{c}", r.Workshops.Count, tableFlags);
@@ -147,20 +146,20 @@ public unsafe class WorkshopOCImport
                 var workshopLimit = r.Workshops.Count - (IgnoreFourthWorkshop && r.Workshops.Count > 1 ? 1 : 0);
                 if (r.Workshops.Count <= 1)
                 {
-                    ImGui.TableSetupColumn(IgnoreFourthWorkshop ? $"Workshops 1-{maxWorkshops - 1}" : "All Workshops");
+                    ImGui.TableSetupColumn(IgnoreFourthWorkshop ? $"工房 1-{maxWorkshops - 1}" : "所有工房");
                 }
                 else if (r.Workshops.Count < maxWorkshops)
                 {
                     var numDuplicates = 1 + maxWorkshops - r.Workshops.Count;
-                    ImGui.TableSetupColumn($"Workshops 1-{numDuplicates}");
+                    ImGui.TableSetupColumn($"工房 1-{numDuplicates}");
                     for (int i = 1; i < workshopLimit; ++i)
-                        ImGui.TableSetupColumn($"Workshop {i + numDuplicates}");
+                        ImGui.TableSetupColumn($"工房 {i + numDuplicates}");
                 }
                 else
                 {
                     // favors
                     for (int i = 0; i < workshopLimit; ++i)
-                        ImGui.TableSetupColumn($"Workshop {i + 1}");
+                        ImGui.TableSetupColumn($"工房 {i + 1}");
                 }
                 ImGui.TableHeadersRow();
 
@@ -449,19 +448,13 @@ public unsafe class WorkshopOCImport
 
     public static string OfficialNameToBotName(string name)
     {
-        // why do they keep fucking changing this!?
-        if (name.StartsWith("Isleworks "))
-            return name.Remove(0, 10);
-        //if (name.StartsWith("Isleberry "))
-        //    return name.Remove(0, 10);
-        if (name.StartsWith("Islefish "))
-            return name.Remove(0, 9);
-        if (name.StartsWith("Island "))
-            return name.Remove(0, 7);
-        if (name == "Mammet of the Cycle Award")
-            return "Mammet Award";
+        if (name.StartsWith("海岛"))
+            return name.Remove(0, 2);
+        if (name.StartsWith("开拓工房"))
+            return name.Remove(0, 4);
         return name;
     }
+
 
     private unsafe void EnsureDemandFavorsAvailable()
     {
