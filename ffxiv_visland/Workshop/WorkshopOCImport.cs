@@ -34,7 +34,7 @@ public unsafe class WorkshopOCImport
         _config = Service.Config.Get<WorkshopConfig>();
         _craftSheet = Service.DataManager.GetExcelSheet<MJICraftworksObject>()!;
         _botNames = _craftSheet.Select(r =>
-                OfficialNameToBotName(r.Item.GetDifferentLanguage(ClientLanguage.English).Value?.Name.RawString ?? ""))
+                OfficialNameToBotName((r.Item.GetDifferentLanguage(ClientLanguage.English).Value?.Name.RawString ?? r.Item.Value?.Name.RawString)!))
             .ToList();
     }
 
@@ -99,34 +99,43 @@ public unsafe class WorkshopOCImport
                 Util.OpenLink("https://discord.com/channels/1034534280757522442/1034985297391407126");
             ImGuiComponents.HelpMarker("\uE051: Discord app\n\uE052: Discord 浏览器页面");
 
-            if (ImGui.Button("从剪贴板覆盖第四间工房的生产安排"))
-                OverrideSideRecsLastWorkshopClipboard();
-            if (ImGui.Button("从剪贴板覆盖最近的工房的生产安排"))
+            ImGui.Text("将剪贴板中的方案应用于:");
+
+            if (ImGui.Button("1-3号工房的生产安排"))
                 OverrideSideRecsAsapClipboard();
+            if (ImGui.Button("4号工房的生产安排"))
+                OverrideSideRecsLastWorkshopClipboard();
         }
         else
         {
-            ImGuiEx.TextV("覆盖第四间工房的生产安排:");
-            ImGui.SameLine();
-            if (ImGui.Button("本周##4th"))
-                OverrideSideRecsLastWorkshopSolver(false);
-            ImGui.SameLine();
-            if (ImGui.Button("下周##4th"))
-                OverrideSideRecsLastWorkshopSolver(true);
+            ImGui.Text("获取求解器方案:");
 
-            ImGuiEx.TextV("覆盖最近的工房的生产安排:");
+            ImGui.BeginGroup();
+            ImGuiEx.TextV("1 - 3 号工房:");
+
+            ImGuiEx.TextV("4 号工房:");
+            ImGui.EndGroup();
+
             ImGui.SameLine();
 
+            ImGui.BeginGroup();
             if (ImGui.Button("本周##asap"))
                 OverrideSideRecsAsapSolver(false);
             ImGui.SameLine();
             if (ImGui.Button("下周##asap"))
                 OverrideSideRecsAsapSolver(true);
+
+            if (ImGui.Button("本周##4th"))
+                OverrideSideRecsLastWorkshopSolver(false);
+            ImGui.SameLine();
+            if (ImGui.Button("下周##4th"))
+                OverrideSideRecsLastWorkshopSolver(true);
+            ImGui.EndGroup();
         }
 
         ImGui.Separator();
 
-        ImGuiEx.TextV("设置生产安排:");
+        ImGuiEx.TextV("应用生产安排:");
         ImGui.SameLine();
         if (ImGui.Button("本周"))
             ApplyRecommendations(false);
@@ -134,7 +143,7 @@ public unsafe class WorkshopOCImport
         if (ImGui.Button("下周"))
             ApplyRecommendations(true);
         ImGui.SameLine();
-        ImGui.Checkbox("忽略四号开拓工房", ref IgnoreFourthWorkshop);
+        ImGui.Checkbox("忽略 4 号工房", ref IgnoreFourthWorkshop);
         ImGui.Separator();
 
         DrawCycleRecommendations();
@@ -160,9 +169,9 @@ public unsafe class WorkshopOCImport
         using var scrollSection = ImRaii.Child("ScrollableSection");
         foreach (var (c, r) in Recommendations.Enumerate())
         {
-            ImGuiEx.TextV($"周期 {c}:");
+            ImGuiEx.TextV($"第 {c} 天:");
             ImGui.SameLine();
-            if (ImGui.Button($"设置为活动周期##{c}"))
+            if (ImGui.Button($"应用##{c}"))
                 ApplyRecommendationToCurrentCycle(r);
 
             using var outerTable = ImRaii.Table($"table_{c}", r.Workshops.Count, tableFlags);
@@ -332,10 +341,11 @@ public unsafe class WorkshopOCImport
     private WorkshopSolver.Recs ParseRecs(string str)
     {
         var result = new WorkshopSolver.Recs();
-
         var curRec = new WorkshopSolver.DayRec();
+
         var nextSlot = 24;
         var curCycle = 0;
+
         foreach (var l in str.Split('\n', '\r'))
             if (TryParseCycleStart(l, out var cycle))
             {
@@ -345,29 +355,38 @@ public unsafe class WorkshopOCImport
                 nextSlot = 24;
                 curCycle = cycle;
             }
-            else if (l == "First 3 Workshops" || l == "All Workshops")
+            else switch (l)
             {
-                // just a sanity check...
-                if (!curRec.Empty)
-                    throw new Exception("Unexpected start of 1st workshop recs");
-            }
-            else if (l == "4th Workshop")
-            {
-                // ensure next item goes into new rec list
-                // TODO: do we want to add an extra empty list if this is the first line?..
-                nextSlot = 24;
-            }
-            else if (TryParseItem(l) is var item && item != null)
-            {
-                if (nextSlot + item.CraftingTime > 24)
+                case "First 3 Workshops":
+                case "All Workshops":
                 {
-                    // start next workshop schedule
-                    curRec.Workshops.Add(new WorkshopSolver.WorkshopRec());
-                    nextSlot = 0;
+                    // just a sanity check...
+                    if (!curRec.Empty)
+                        throw new Exception("Unexpected start of 1st workshop recs");
+                    break;
                 }
+                case "4th Workshop":
+                    // ensure next item goes into new rec list
+                    // TODO: do we want to add an extra empty list if this is the first line?..
+                    nextSlot = 24;
+                    break;
+                default:
+                {
+                    if (TryParseItem(l) is { } item)
+                    {
+                        if (nextSlot + item.CraftingTime > 24)
+                        {
+                            // start next workshop schedule
+                            curRec.Workshops.Add(new WorkshopSolver.WorkshopRec());
+                            nextSlot = 0;
+                        }
 
-                curRec.Workshops.Last().Add(nextSlot, item.RowId);
-                nextSlot += item.CraftingTime;
+                        curRec.Workshops.Last().Add(nextSlot, item.RowId);
+                        nextSlot += item.CraftingTime;
+                    }
+
+                    break;
+                }
             }
 
         // complete current cycle; if the number was not known, assume it is tomorrow.
