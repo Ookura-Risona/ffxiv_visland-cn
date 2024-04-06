@@ -60,8 +60,50 @@ public unsafe class WorkshopOCImport
         {
             try
             {
-                var staticSchedule = Regex.Replace(ImGui.GetClipboardText().Trim(), @"\[[^\]]*\]", "", RegexOptions.Multiline);
-                staticSchedule = staticSchedule.Split('\n').Select(i => "Cycle " + i).Aggregate((i, j) => i + "\n" + j).Replace('、', '\n').Replace('.', '\n');
+                var staticSchedule = Regex.Replace(ImGui.GetClipboardText().Trim(), @"\[[^\]]*\]|.+收益.+", "", RegexOptions.Multiline);
+                staticSchedule = Regex.Replace(staticSchedule, @"^(?=\d\.)", "Cycle ", RegexOptions.Multiline).Replace('.', '\n');
+                staticSchedule = staticSchedule
+                    .Split('\n')
+                    .Where(i => !string.IsNullOrWhiteSpace(i))
+                    .Aggregate((i, j) => i + "\n" + j)
+                    .Replace('、', '\n');
+                Recommendations = ParseRecs(staticSchedule);
+            }
+            catch (Exception ex)
+            {
+                ReportError($"错误: {ex.Message}");
+            }
+        }
+
+        ImGui.SameLine();
+        if (ImGui.Button("从剪贴板导入国服动态作业"))
+        {
+            try
+            {
+                string repeat(string scheduleLine)
+                {
+                    var result = Regex.Match(scheduleLine, @"(?<times>\d)[×x](?<things>.+)", RegexOptions.Compiled);
+                    if (!result.Success)
+                    {
+                        result = Regex.Match(scheduleLine, @"(?<things>.+)[×x](?<times>\d)", RegexOptions.Compiled);
+                    }
+                    if (!result.Success)
+                    {
+                        return scheduleLine;
+                    }
+                    var times = int.Parse(result.Groups["times"].Value);
+                    var things = result.Groups["things"].Value.Trim();
+                    return string.Join("\n", Enumerable.Repeat(things, times));
+                }
+
+                var staticSchedule = Regex.Replace(ImGui.GetClipboardText().Trim(), @"\[[^\]]*\]|.+收益.+", "", RegexOptions.Multiline);
+                staticSchedule = Regex.Replace(staticSchedule, @"^(?=\d\.)", "Cycle ", RegexOptions.Multiline).Replace('.', '\n');
+                staticSchedule = staticSchedule
+                    .Split('\n')
+                    .Where(i => !string.IsNullOrWhiteSpace(i))
+                    .Select(repeat)
+                    .Aggregate((i, j) => i + "\n" + j)
+                    .Replace('、', '\n');
                 Recommendations = ParseRecs(staticSchedule);
             }
             catch (Exception ex)
