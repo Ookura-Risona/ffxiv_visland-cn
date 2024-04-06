@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.Linq;
 using System.Numerics;
@@ -10,6 +10,12 @@ using Dalamud.Plugin;
 using ECommons;
 using ECommons.Automation;
 using ECommons.Reflection;
+using ImGuiNET;
+using System;
+using System.Globalization;
+using System.Linq;
+using System.Numerics;
+using System.Reflection;
 using Newtonsoft.Json;
 using visland.Export;
 using visland.Farm;
@@ -35,6 +41,8 @@ public sealed class Plugin : IDalamudPlugin
     private readonly VislandIPC _vislandIPC;
     internal TaskManager TaskManager;
     internal Memory Memory;
+
+    private VislandIPC _vislandIPC;
 
     public WindowSystem WindowSystem = new("visland");
     private readonly GatherWindow _wndGather;

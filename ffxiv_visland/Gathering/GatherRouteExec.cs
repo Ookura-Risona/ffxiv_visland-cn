@@ -123,8 +123,6 @@ public class GatherRouteExec : IDisposable
             return;
         }
 
-        ToggleExecutors(true, wp);
-
         switch (wp.Interaction)
         {
             case GatherRouteDB.InteractionType.Standard:
@@ -180,8 +178,6 @@ public class GatherRouteExec : IDisposable
 
         if (Plugin.P.TaskManager.IsBusy) return; // let any interactions play out first
 
-        ToggleExecutors(false);
-
         if (!ContinueToNext)
         {
             Finish();
@@ -217,6 +213,7 @@ public class GatherRouteExec : IDisposable
         CurrentWaypoint = waypoint;
         ContinueToNext = continueToNext;
         Loop = loopAtEnd;
+        route.Waypoints[waypoint].Pathfind = pathfind;
         Pathfind = pathfind;
         _camera.Enabled = true;
         _movement.Enabled = true;
@@ -233,7 +230,6 @@ public class GatherRouteExec : IDisposable
         _camera.Enabled = false;
         _movement.Enabled = false;
         CompatModule.RestoreChanges();
-        ToggleExecutors(false);
         if (Pathfind && NavmeshIPC.PathIsRunning())
             NavmeshIPC.PathStop();
     }
@@ -263,8 +259,9 @@ public class GatherRouteExec : IDisposable
             ExecSkipTalk.Init();
             ExecSelectYes.Init();
             ExecQuestJournalEvent.Init();
-            ExecKillCounter.Init([QuestsHelper.GetMobName((uint)wp!.MobID)]);
             AutoCutsceneSkipper.Enable();
+            if (wp!.Interaction == GatherRouteDB.InteractionType.Grind)
+                ExecKillCounter.Init([QuestsHelper.GetMobName((uint)wp!.MobID)]);
         }
         else
         {
@@ -272,8 +269,8 @@ public class GatherRouteExec : IDisposable
             ExecSkipTalk.Shutdown();
             ExecSelectYes.Shutdown();
             ExecQuestJournalEvent.Shutdown();
-            ExecKillCounter.Dispose();
             AutoCutsceneSkipper.Disable();
+            ExecKillCounter.Dispose();
         }
     }
 
