@@ -12,7 +12,7 @@ unsafe class WorkshopWindow : UIAttachedWindow
     private WorkshopOCImport _oc = new();
     private WorkshopDebug _debug = new();
 
-    public WorkshopWindow() : base("Workshop automation", "MJICraftSchedule", new(500, 650))
+    public WorkshopWindow() : base("工房自动化", "MJICraftSchedule", new(500, 650))
     {
         _config = Service.Config.Get<WorkshopConfig>();
     }
@@ -29,21 +29,19 @@ unsafe class WorkshopWindow : UIAttachedWindow
     public override void Draw()
     {
         using var tabs = ImRaii.TabBar("Tabs");
-        if (tabs)
-        {
-            using (var tab = ImRaii.TabItem("OC import"))
-                if (tab)
-                    _oc.Draw();
-            using (var tab = ImRaii.TabItem("Manual schedule"))
-                if (tab)
-                    _manual.Draw();
-            using (var tab = ImRaii.TabItem("Settings"))
-                if (tab)
-                    DrawSettings();
-            using (var tab = ImRaii.TabItem("Debug"))
-                if (tab)
-                    _debug.Draw();
-        }
+        if (!tabs) return;
+        using (var tab = ImRaii.TabItem("导入预设"))
+            if (tab)
+                _oc.Draw();
+        using (var tab = ImRaii.TabItem("手动安排"))
+            if (tab)
+                _manual.Draw();
+        using (var tab = ImRaii.TabItem("设置"))
+            if (tab)
+                DrawSettings();
+        using (var tab = ImRaii.TabItem("Debug"))
+            if (tab)
+                _debug.Draw();
     }
 
     public override void OnOpen()
@@ -60,11 +58,11 @@ unsafe class WorkshopWindow : UIAttachedWindow
 
     private void DrawSettings()
     {
-        if (ImGui.Checkbox("Automatically select next cycle on open", ref _config.AutoOpenNextDay))
+        if (ImGui.Checkbox("开启时自动选择下一周期", ref _config.AutoOpenNextDay))
             _config.NotifyModified();
-        if (ImGui.Checkbox("Automatically import base recs on open", ref _config.AutoImport))
+        if (ImGui.Checkbox("开启时自动导入基础需求", ref _config.AutoImport))
             _config.NotifyModified();
-        if (ImGui.Checkbox("Use experimental favor solver", ref _config.UseFavorSolver))
+        if (ImGui.Checkbox("使用实验性求解器", ref _config.UseFavorSolver))
             _config.NotifyModified();
     }
 }

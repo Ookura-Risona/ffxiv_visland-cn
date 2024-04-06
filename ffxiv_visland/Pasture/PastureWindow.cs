@@ -12,7 +12,7 @@ unsafe class PastureWindow : UIAttachedWindow
     private PastureConfig _config;
     private PastureDebug _debug = new();
 
-    public PastureWindow() : base("Pasture Automation", "MJIAnimalManagement", new(400, 600))
+    public PastureWindow() : base("牧场自动化", "MJIAnimalManagement", new(400, 600))
     {
         _config = Service.Config.Get<PastureConfig>();
     }
@@ -41,7 +41,7 @@ unsafe class PastureWindow : UIAttachedWindow
         using var tabs = ImRaii.TabBar("Tabs");
         if (tabs)
         {
-            using (var tab = ImRaii.TabItem("Main"))
+            using (var tab = ImRaii.TabItem("主界面"))
                 if (tab)
                     DrawMain();
             using (var tab = ImRaii.TabItem("Debug"))
@@ -52,7 +52,7 @@ unsafe class PastureWindow : UIAttachedWindow
 
     private void DrawMain()
     {
-        if (UICombo.Enum("Auto Collect", ref _config.Collect))
+        if (UICombo.Enum("自动收取", ref _config.Collect))
             _config.NotifyModified();
         ImGui.Separator();
 
@@ -60,7 +60,7 @@ unsafe class PastureWindow : UIAttachedWindow
         var agent = AgentMJIAnimalManagement.Instance();
         if (mji == null || mji->PastureHandler == null || mji->IslandState.Pasture.EligibleForCare == 0 || agent == null)
         {
-            ImGui.TextUnformatted("Mammets not available!");
+            ImGui.TextUnformatted("自走人偶当前不可用");
             return;
         }
 
@@ -75,20 +75,20 @@ unsafe class PastureWindow : UIAttachedWindow
             // if there's uncollected stuff - propose to collect everything
             using (ImRaii.Disabled(res == CollectResult.EverythingCapped))
             {
-                if (ImGui.Button("Collect all"))
+                if (ImGui.Button("收取全部"))
                     CollectAll();
                 if (res != CollectResult.CanCollectSafely)
                 {
                     ImGui.SameLine();
                     using (ImRaii.PushColor(ImGuiCol.Text, 0xff0000ff))
-                        ImGuiEx.TextV(res == CollectResult.EverythingCapped ? "Inventory is full!" : "Warning: some resources will overcap!");
+                        ImGuiEx.TextV(res == CollectResult.EverythingCapped ? "背包已满!" : "警告: 部分资源即将超限!");
                 }
             }
         }
         else
         {
             // TODO: think about any other global operations?
-            ImGuiEx.TextV("Nothing to collect!");
+            ImGuiEx.TextV("无待收取物品");
         }
     }
 
@@ -119,7 +119,7 @@ unsafe class PastureWindow : UIAttachedWindow
         var mji = MJIManager.Instance();
         if (mji != null && mji->PastureHandler != null)
         {
-            Service.Log.Info("Collecting everything from pasture");
+            Service.Log.Info("正在收取牧场中的所有物品");
             mji->PastureHandler->CollectLeavingsAll();
         }
     }

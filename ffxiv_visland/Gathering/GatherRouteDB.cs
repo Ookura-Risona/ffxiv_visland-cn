@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Numerics;
 using visland.Helpers;
@@ -13,31 +14,47 @@ public class GatherRouteDB : Configuration.Node
 {
     public enum Movement
     {
+        [Description("普通")]
         Normal = 0,
+        [Description("坐骑 (飞行)")]
         MountFly = 1,
+        [Description("坐骑")]
         MountNoFly = 2,
     }
 
     public enum InteractionType
     {
+        [Description("无")]
         None = 0,
+        [Description("标准")]
         Standard = 1,
+        [Description("表情")]
         Emote = 2,
+        [Description("物品")]
         UseItem = 3,
+        [Description("技能")]
         UseAction = 4,
+        [Description("任务对话")]
         QuestTalk = 5,
+        [Description("手柄")]
         Grind = 6,
         //PickupQuest = 7,
-        //TurninQuest = 8,
+        //TurningQuest = 8,
+        [Description("开始路线")]
         StartRoute = 9,
+        [Description("装备推荐装备")]
         EquipRecommendedGear = 10,
     }
 
     public enum GrindStopConditions
     {
+        [Description("无")]
         None = 0,
+        [Description("击杀")]
         Kills = 1,
+        [Description("任务序列")]
         QuestSequence = 2,
+        [Description("任务完成")]
         QuestComplete = 3,
     }
 
