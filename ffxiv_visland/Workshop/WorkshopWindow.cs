@@ -30,7 +30,7 @@ unsafe class WorkshopWindow : UIAttachedWindow
     {
         using var tabs = ImRaii.TabBar("Tabs");
         if (!tabs) return;
-        using (var tab = ImRaii.TabItem("导入预设"))
+        using (var tab = ImRaii.TabItem("使用预设"))
             if (tab)
                 _oc.Draw();
         using (var tab = ImRaii.TabItem("手动安排"))

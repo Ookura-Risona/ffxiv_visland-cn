@@ -5,6 +5,7 @@ using System.Numerics;
 using System.Text.RegularExpressions;
 using Dalamud;
 using Dalamud.Interface;
+using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility;
@@ -51,12 +52,22 @@ public unsafe class WorkshopOCImport
                 ImRaii.Disabled(_pendingActions.Count >
                                 0); // disallow any manipulations while delayed actions are in progress
 
-        if (ImGui.Button("从剪贴板导入 OC 作业"))
-            ImportRecsFromClipboard(false);
-        ImGuiComponents.HelpMarker("用于从剪贴板导入来自 Overseas Casuals Discord 的工房日程安排\n" +
-                                   "原理为检测剪贴板内每一行的物品名 (不包含诸如海岛, 开拓工房之类的前缀词)");
+        ImGui.TextColored(ImGuiColors.DalamudYellow, "从剪贴板导入");
 
-        if (ImGui.Button("从剪贴板导入国服静态作业"))
+        ImGui.SameLine();
+        ImGuiComponents.HelpMarker("原理为检测剪贴板内每一行的物品名 (不包含诸如海岛, 开拓工房之类的前缀词), 然后解析为对应预设");
+
+        ImGui.Separator();
+
+        ImGui.AlignTextToFramePadding();
+        ImGui.Text("来源:");
+
+        ImGui.SameLine();
+        if (ImGui.Button("Overseas Casuals (国际服)"))
+            ImportRecsFromClipboard(false);
+
+        ImGui.SameLine();
+        if (ImGui.Button("静态作业 (国服)"))
         {
             try
             {
@@ -76,7 +87,7 @@ public unsafe class WorkshopOCImport
         }
 
         ImGui.SameLine();
-        if (ImGui.Button("从剪贴板导入国服动态作业"))
+        if (ImGui.Button("动态作业 (国服)"))
         {
             try
             {
@@ -111,6 +122,7 @@ public unsafe class WorkshopOCImport
                 ReportError($"错误: {ex.Message}");
             }
         }
+
         ImGuiComponents.HelpMarker("用于从剪贴板导入来自 蜡笔桶 的静态工房日程安排\n" +
                                    "你可以通过点击本按钮来打开对应的腾讯文档页面");
 
@@ -120,7 +132,7 @@ public unsafe class WorkshopOCImport
         if (Recommendations.Empty)
             return;
 
-        ImGui.Separator();
+        ImGui.Dummy(new(12));
 
         if (!_config.UseFavorSolver)
         {
@@ -150,7 +162,9 @@ public unsafe class WorkshopOCImport
         }
         else
         {
-            ImGui.Text("获取求解器方案:");
+            ImGui.TextColored(ImGuiColors.DalamudYellow, "使用求解器方案:");
+
+            ImGui.Separator();
 
             ImGui.BeginGroup();
             ImGuiEx.TextV("1 - 3 号工房:");
@@ -175,18 +189,21 @@ public unsafe class WorkshopOCImport
             ImGui.EndGroup();
         }
 
+        ImGui.Dummy(new(12));
+
+        ImGui.TextColored(ImGuiColors.DalamudYellow, "应用生产安排:");
+
         ImGui.Separator();
 
-        ImGuiEx.TextV("应用生产安排:");
-        ImGui.SameLine();
-        if (ImGui.Button("本周"))
+        if (ImGui.Button("    本周    "))
             ApplyRecommendations(false);
         ImGui.SameLine();
-        if (ImGui.Button("下周"))
+        if (ImGui.Button("    下周    "))
             ApplyRecommendations(true);
         ImGui.SameLine();
         ImGui.Checkbox("忽略 4 号工房", ref IgnoreFourthWorkshop);
-        ImGui.Separator();
+
+        ImGui.Dummy(new(12));
 
         DrawCycleRecommendations();
     }

@@ -38,7 +38,6 @@ public sealed class Plugin : IDalamudPlugin
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     internal static Plugin P;
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-    private readonly VislandIPC _vislandIPC;
     internal TaskManager TaskManager;
     internal Memory Memory;
 

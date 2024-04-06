@@ -179,7 +179,7 @@ public class GatherWindow : Window, IDisposable
                 RouteDB.NotifyModified();
             ImGuiComponents.HelpMarker("因物品达到上限而无法采集时, 停止路线运行");
 
-            ImGuiEx.TextV("Search: ");
+            ImGuiEx.TextV("搜索: ");
             ImGui.SameLine();
             ImGuiEx.SetNextItemFullWidth();
             if (ImGui.InputText("###RouteSearch", ref searchString, 500))
