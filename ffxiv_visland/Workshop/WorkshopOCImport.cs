@@ -123,7 +123,7 @@ public unsafe class WorkshopOCImport
             }
         }
 
-        ImGuiComponents.HelpMarker("用于从剪贴板导入来自 蜡笔桶 的静态工房日程安排\n" +
+        ImGuiComponents.HelpMarker("用于从剪贴板导入来自 蜡笔桶 的工房日程安排\n" +
                                    "你可以通过点击本按钮来打开对应的腾讯文档页面");
 
         if (ImGui.IsItemClicked())

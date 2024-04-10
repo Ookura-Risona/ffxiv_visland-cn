@@ -44,6 +44,9 @@ public class GatherWindow : Window, IDisposable
     private string searchString = string.Empty;
     private readonly List<Route> FilteredRoutes = [];
 
+    private readonly Dictionary<uint, Mount>? _mounts;
+    private string mountSearchString = string.Empty;
+
     public GatherWindow() : base("采集自动化", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
     {
         Size = new Vector2(800, 800);
@@ -52,6 +55,10 @@ public class GatherWindow : Window, IDisposable
 
         _debug = new GatherDebug(Exec);
         _items = Svc.Data.GetExcelSheet<Item>()!;
+
+        _mounts ??= Svc.Data.GetExcelSheet<Mount>()!
+            .Where(x => !string.IsNullOrWhiteSpace(x.Singular.RawString))
+            .ToDictionary(x => x.RowId, x => x);
     }
 
     public void Dispose()
@@ -217,6 +224,35 @@ public class GatherWindow : Window, IDisposable
                 RouteDB.NotifyModified();
             if (ImGui.SliderFloat("默认交互半径", ref RouteDB.DefaultInteractionRadius, 0, 100))
                 RouteDB.NotifyModified();
+            if (ImGui.BeginCombo("默认坐骑", _mounts![(uint)RouteDB.SelectedMount].Singular.RawString))
+            {
+                ImGui.InputText("###MountSearchInput", ref mountSearchString, 100);
+
+                ImGui.Separator();
+
+                if (ImGui.Selectable("随机坐骑", RouteDB.SelectedMount < 0))
+                {
+                    RouteDB.SelectedMount = 0;
+                    RouteDB.NotifyModified();
+                }
+
+                ImGui.Separator();
+
+                foreach (var mount in _mounts!)
+                {
+                    var mountName = mount.Value.Singular.RawString;
+                    if (!string.IsNullOrWhiteSpace(mountSearchString) && !mountName.Contains(mountSearchString, StringComparison.OrdinalIgnoreCase)) continue;
+
+                    if (ImGui.Selectable(mount.Value.Singular.RawString, RouteDB.SelectedMount == mount.Key))
+                    {
+                        RouteDB.SelectedMount = (int)mount.Key;
+                        RouteDB.NotifyModified();
+                    }
+                }
+
+                ImGui.EndCombo();
+            }
+
             if (ImGui.Checkbox("开始时自动切换至采集模式", ref RouteDB.GatherModeOnStart))
                 RouteDB.NotifyModified();
         }
@@ -407,7 +443,7 @@ public class GatherWindow : Window, IDisposable
             RouteDB.NotifyModified();
         }
 
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip("切换交互");
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("切换至交互");
         ImGui.SameLine();
         if (ImGuiEx.IconButton(FontAwesomeIcon.Clock))
         {
@@ -415,7 +451,7 @@ public class GatherWindow : Window, IDisposable
             RouteDB.NotifyModified();
         }
 
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip("切换等待");
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("切换至等待");
 
         if (wp.showInteractions)
         {

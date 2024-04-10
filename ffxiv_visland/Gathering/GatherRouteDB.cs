@@ -94,6 +94,7 @@ public class GatherRouteDB : Configuration.Node
     public List<Route> Routes = [];
     public float DefaultWaypointRadius = 3;
     public float DefaultInteractionRadius = 2;
+    public int SelectedMount = 1;
     public bool GatherModeOnStart = true;
     public bool DisableOnErrors = false;
     public bool WasFlyingInManual = false;
@@ -114,6 +115,7 @@ public class GatherRouteDB : Configuration.Node
         GatherModeOnStart = (bool?)j["GatherModeOnStart"] ?? true;
         DefaultWaypointRadius = (float?)j["DefaultWaypointRadius"] ?? 3;
         DefaultInteractionRadius = (float?)j["DefaultInteractionRadius"] ?? 2;
+        SelectedMount = (int?)j["SelectedMount"] ?? 1;
     }
 
     public override JObject Serialize(JsonSerializer ser)
@@ -132,7 +134,8 @@ public class GatherRouteDB : Configuration.Node
             { "DisableOnErrors", DisableOnErrors },
             { "GatherModeOnStart", GatherModeOnStart },
             { "DefaultWaypointRadius", DefaultWaypointRadius },
-            { "DefaultInteractionRadius", DefaultInteractionRadius }
+            { "DefaultInteractionRadius", DefaultInteractionRadius },
+            { "SelectedMount", SelectedMount }
         };
     }
 
