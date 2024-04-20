@@ -31,26 +31,6 @@ using Dalamud.Utility;
 
 namespace visland;
 
-class RepoNotifyWindow : Window
-{
-    public static string Url0 = "https://raw.githubusercontent.com/AtmoOmen/DalamudPlugins/main/pluginmaster.json";
-    public static string Url1 = "https://mirror.ghproxy.com/https://raw.githubusercontent.com/AtmoOmen/DalamudPlugins/main/pluginmaster-cn.json";
-
-    public RepoNotifyWindow() : base("请使用在线仓库链接安装本插件!")
-    {
-        IsOpen = true;
-    }
-
-    public override void Draw()
-    {
-        ImGui.TextUnformatted("此插件仅支持从特定的仓库以在线下载的形式安装");
-        ImGui.TextUnformatted($"原始链接: {Url0}");
-        ImGui.TextUnformatted($"国内链接: {Url1}");
-        if (ImGui.Button("点击访问插件库在线页面"))
-            Util.OpenLink("https://github.com/AtmoOmen/DailyRoutines");
-    }
-}
-
 public sealed class Plugin : IDalamudPlugin
 {
     public static string Name => "visland";
@@ -110,12 +90,6 @@ public sealed class Plugin : IDalamudPlugin
         _wndExports = new ExportWindow();
 
         _vislandIPC = new VislandIPC(_wndGather);
-
-        if (dalamud.SourceRepository != RepoNotifyWindow.Url0 && dalamud.SourceRepository != RepoNotifyWindow.Url1)
-        {
-            WindowSystem.AddWindow(new RepoNotifyWindow());
-            return;
-        }
 
         WindowSystem.AddWindow(_wndGather);
         WindowSystem.AddWindow(_wndWorkshop);
