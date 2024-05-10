@@ -224,13 +224,13 @@ public class GatherWindow : Window, IDisposable
                 RouteDB.NotifyModified();
             if (ImGui.SliderFloat("默认交互半径", ref RouteDB.DefaultInteractionRadius, 0, 100))
                 RouteDB.NotifyModified();
-            if (ImGui.BeginCombo("默认坐骑", _mounts![(uint)RouteDB.SelectedMount].Singular.RawString))
+            if (ImGui.BeginCombo("默认坐骑", RouteDB.SelectedMount <= 0 ? "随机坐骑" : _mounts![(uint)RouteDB.SelectedMount].Singular.RawString))
             {
                 ImGui.InputText("###MountSearchInput", ref mountSearchString, 100);
 
                 ImGui.Separator();
 
-                if (ImGui.Selectable("随机坐骑", RouteDB.SelectedMount < 0))
+                if (ImGui.Selectable("随机坐骑", RouteDB.SelectedMount <= 0))
                 {
                     RouteDB.SelectedMount = 0;
                     RouteDB.NotifyModified();
