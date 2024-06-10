@@ -1,8 +1,8 @@
 {
-  "Author": "veyn, croizat",
+  "Author": "veyn, croizat, AtmoOmen (本地化)",
   "Name": "V(ery) Island",
-  "Punchline": "Automate island sanctuary activities",
-  "Description": "Automate gathering, workshop assignments, etc.",
+  "Punchline": "自动化无人岛作业",
+  "Description": "帮你完成自动采集, 自动派遣等等\n\n注: 插件免费开源, 仅支持在线安装",
   "InternalName": "visland",
   "ApplicableVersion": "any",
   "IconUrl": "https://raw.githubusercontent.com/awgil/ffxiv_visland/d3338f6ddbf54365e60fbdf8e85ea8f5abdb745f/icon.png"

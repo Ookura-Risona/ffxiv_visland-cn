@@ -12,7 +12,7 @@ unsafe class GranaryWindow : UIAttachedWindow
     private GranaryConfig _config;
     private GranaryDebug _debug;
 
-    public GranaryWindow() : base("Granary Automation", "MJIGatheringHouse", new(400, 600))
+    public GranaryWindow() : base("屯货仓库自动化", "MJIGatheringHouse", new(400, 600))
     {
         _config = Service.Config.Get<GranaryConfig>();
         _debug = new();
@@ -30,7 +30,7 @@ unsafe class GranaryWindow : UIAttachedWindow
         using var tabs = ImRaii.TabBar("Tabs");
         if (tabs)
         {
-            using (var tab = ImRaii.TabItem("Main"))
+            using (var tab = ImRaii.TabItem("主界面"))
                 if (tab)
                     DrawMain();
             using (var tab = ImRaii.TabItem("Debug"))
@@ -55,11 +55,11 @@ unsafe class GranaryWindow : UIAttachedWindow
 
     private unsafe void DrawMain()
     {
-        if (UICombo.Enum("Auto Collect", ref _config.Collect))
+        if (UICombo.Enum("自动收取", ref _config.Collect))
             _config.NotifyModified();
-        if (UICombo.Enum("Auto Reassign", ref _config.Reassign))
+        if (UICombo.Enum("自动重新派遣", ref _config.Reassign))
             _config.NotifyModified();
-        if (ImGui.Button("Apply!"))
+        if (ImGui.Button("应用"))
             ForceReassign();
 
         ImGui.Separator();
@@ -84,7 +84,7 @@ unsafe class GranaryWindow : UIAttachedWindow
             {
                 ImGui.TableNextColumn();
                 using (ImRaii.Disabled(collectStates[i] is CollectResult.NothingToCollect or CollectResult.EverythingCapped))
-                    if (ImGui.Button($"Collect##{i}"))
+                    if (ImGui.Button($"收取##{i}"))
                         GranaryUtils.Collect(i);
             }
 
@@ -106,7 +106,7 @@ unsafe class GranaryWindow : UIAttachedWindow
                     var curDays = GranaryUtils.GetGranaryState(i)->RemainingDays;
                     var maxDays = (byte)Math.Min(7, curDays + GranaryUtils.MaxDays());
                     using (ImRaii.Disabled(collectStates[i] != CollectResult.NothingToCollect || curDest == e->ExpeditionId && curDays == maxDays))
-                        if (ImGui.Button($"{(curDest == e->ExpeditionId ? "Max" : "Reassign")}##{i}_{e->ExpeditionId}"))
+                        if (ImGui.Button($"{(curDest == e->ExpeditionId ? "已达上限" : "重新派遣")}##{i}_{e->ExpeditionId}"))
                             GranaryUtils.SelectExpedition((byte)i, e->ExpeditionId, maxDays);
                 }
             }

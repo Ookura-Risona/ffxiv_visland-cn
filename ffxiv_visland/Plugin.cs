@@ -1,4 +1,9 @@
-﻿using Dalamud.Common;
+using System;
+using System.Globalization;
+using System.Linq;
+using System.Numerics;
+using System.Reflection;
+using Dalamud.Common;
 using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
@@ -11,6 +16,7 @@ using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
+using Newtonsoft.Json;
 using visland.Export;
 using visland.Farm;
 using visland.Gathering;
@@ -20,33 +26,10 @@ using visland.IPC;
 using visland.Pasture;
 using visland.Questing;
 using visland.Workshop;
+using Module = ECommons.Module;
+using Dalamud.Utility;
 
 namespace visland;
-
-class RepoMigrateWindow : Window
-{
-    public static string OldURL = "https://raw.githubusercontent.com/awgil/ffxiv_plugin_distribution/master/pluginmaster.json";
-    public static string NewURL = "https://puni.sh/api/repository/veyn";
-
-    public RepoMigrateWindow() : base("Warning! Plugin home repository was changed")
-    {
-        IsOpen = true;
-    }
-
-    public override void Draw()
-    {
-        ImGui.TextUnformatted("The home repository of Island Sanctuary Automation (visland) plugin was recently changed.");
-        ImGui.TextUnformatted("Please update your dalamud settings to point to the new repository:");
-        if (ImGui.Button("Click here to copy new url into clipboard"))
-            ImGui.SetClipboardText(NewURL);
-        ImGui.TextUnformatted("1. Go to repo settings (esc -> dalamud settings -> experimental).");
-        ImGui.TextUnformatted($"2. Replace '{OldURL}' with '{NewURL}' (use button above and just ctrl-V).");
-        ImGui.TextUnformatted("3. Press save-and-close button.");
-        ImGui.TextUnformatted("4. Go to dalamud plugins (esc -> dalamud plugins -> installed plugins).");
-        ImGui.TextUnformatted("5. Uninstall and reinstall this plugin (you might need to restart the game before dalamud allows you to reinstall).");
-        ImGui.TextUnformatted("Don't worry, you won't lose any settings. Sorry for bother and enjoy the plugin!");
-    }
-}
 
 public sealed class Plugin : IDalamudPlugin
 {
@@ -62,24 +45,25 @@ public sealed class Plugin : IDalamudPlugin
     private VislandIPC _vislandIPC;
 
     public WindowSystem WindowSystem = new("visland");
-    private GatherWindow _wndGather;
-    private WorkshopWindow _wndWorkshop;
-    private GranaryWindow _wndGranary;
-    private PastureWindow _wndPasture;
-    private FarmWindow _wndFarm;
-    private ExportWindow _wndExports;
+    private readonly GatherWindow _wndGather;
+    private readonly WorkshopWindow _wndWorkshop;
+    private readonly GranaryWindow _wndGranary;
+    private readonly PastureWindow _wndPasture;
+    private readonly FarmWindow _wndFarm;
+    private readonly ExportWindow _wndExports;
 
-    public unsafe Plugin(DalamudPluginInterface dalamud)
+    public Plugin(DalamudPluginInterface dalamud)
     {
         var dir = dalamud.ConfigDirectory;
         if (!dir.Exists)
             dir.Create();
-        var dalamudRoot = dalamud.GetType().Assembly.
-                GetType("Dalamud.Service`1", true)!.MakeGenericType(dalamud.GetType().Assembly.GetType("Dalamud.Dalamud", true)!).
-                GetMethod("Get")!.Invoke(null, BindingFlags.Default, null, Array.Empty<object>(), null);
+        var dalamudRoot =
+            dalamud.GetType().Assembly.GetType("Dalamud.Service`1", true)!
+                .MakeGenericType(dalamud.GetType().Assembly.GetType("Dalamud.Dalamud", true)!).GetMethod("Get")!
+                .Invoke(null, BindingFlags.Default, null, Array.Empty<object>(), null);
         var dalamudStartInfo = dalamudRoot.GetFoP<DalamudStartInfo>("StartInfo");
 
-        ECommonsMain.Init(dalamud, this, ECommons.Module.DalamudReflector);
+        ECommonsMain.Init(dalamud, this, Module.DalamudReflector);
         DalamudReflector.RegisterOnInstalledPluginsChangedEvents(CheckIPC);
         Service.Init(dalamud);
         AutoCutsceneSkipper.Init(null);
@@ -95,8 +79,8 @@ public sealed class Plugin : IDalamudPlugin
 
         Dalamud = dalamud;
         P = this;
-        TaskManager = new() { AbortOnTimeout = true, TimeLimitMS = 20000 };
-        Memory  = new();
+        TaskManager = new TaskManager { AbortOnTimeout = true, TimeLimitMS = 20000 };
+        Memory = new Memory();
 
         _wndGather = new GatherWindow();
         _wndWorkshop = new WorkshopWindow();
@@ -105,36 +89,29 @@ public sealed class Plugin : IDalamudPlugin
         _wndFarm = new FarmWindow();
         _wndExports = new ExportWindow();
 
-        _vislandIPC = new(_wndGather);
+        _vislandIPC = new VislandIPC(_wndGather);
 
-        if (dalamud.SourceRepository == RepoMigrateWindow.OldURL)
+        WindowSystem.AddWindow(_wndGather);
+        WindowSystem.AddWindow(_wndWorkshop);
+        WindowSystem.AddWindow(_wndGranary);
+        WindowSystem.AddWindow(_wndPasture);
+        WindowSystem.AddWindow(_wndFarm);
+        WindowSystem.AddWindow(_wndExports);
+        Service.CommandManager.AddHandler("/visland", new CommandInfo(OnCommand)
         {
-            WindowSystem.AddWindow(new RepoMigrateWindow());
-        }
-        else
-        {
-            WindowSystem.AddWindow(_wndGather);
-            WindowSystem.AddWindow(_wndWorkshop);
-            WindowSystem.AddWindow(_wndGranary);
-            WindowSystem.AddWindow(_wndPasture);
-            WindowSystem.AddWindow(_wndFarm);
-            WindowSystem.AddWindow(_wndExports);
-            Service.CommandManager.AddHandler("/visland", new CommandInfo(OnCommand)
-            {
-                HelpMessage = "Opens the Gathering Menu\n" +
-                $"/{Name} moveto <X> <Y> <Z> → move to raw coordinates\n" +
-                $"/{Name} movedir <X> <Y> <Z> → move this many units over (relative to player facing)\n" +
-                $"/{Name} stop → stop current route\n" +
-                $"/{Name} pause → pause current route\n" +
-                $"/{Name} resume → resume current route\n" +
-                $"/{Name} exec <name> → run route by name continuously\n" +
-                $"/{Name} execonce <name> → run route by name once\n" +
-                $"/{Name} exectemp <base64 route> → run unsaved route continuously\n" +
-                $"/{Name} exectemponce <base64 route> → run unsaved route once",
-                ShowInHelp = true,
-            });
-            Dalamud.UiBuilder.OpenConfigUi += () => _wndGather.IsOpen = true;
-        }
+            HelpMessage = "开启采集界面\n" +
+                          $"/{Name} moveto <X> <Y> <Z> → 移动至指定坐标\n" +
+                          $"/{Name} movedir <X> <Y> <Z> → 根据当前面向移动指定单位距离\n" +
+                          $"/{Name} stop → 停止当前路线\n" +
+                          $"/{Name} pause → 暂停当前路线\n" +
+                          $"/{Name} resume → 继续当前路线\n" +
+                          $"/{Name} exec <name> → 循环运行指定名称的路线\n" +
+                          $"/{Name} execonce <name> → 运行指定名称的路线一次\n" +
+                          $"/{Name} exectemp <base64 route> → 循环运行临时路线\n" +
+                          $"/{Name} exectemponce <base64 route> → 运行临时路线一次",
+            ShowInHelp = true
+        });
+        Dalamud.UiBuilder.OpenConfigUi += () => _wndGather.IsOpen = true;
     }
 
     public void Dispose()
@@ -198,8 +175,8 @@ public sealed class Plugin : IDalamudPlugin
 
     private void ExecuteTempRoute(string base64, bool once)
     {
-        var json = Utils.FromCompressedBase64(base64);
-        var route = Newtonsoft.Json.JsonConvert.DeserializeObject<GatherRouteDB.Route>(json);
+        var json = base64.FromCompressedBase64();
+        var route = JsonConvert.DeserializeObject<GatherRouteDB.Route>(json);
         if (route != null)
             _wndGather.Exec.Start(route, 0, true, !once);
     }
@@ -207,10 +184,12 @@ public sealed class Plugin : IDalamudPlugin
     private void MoveToCommand(string[] args, bool relativeToPlayer)
     {
         var originActor = relativeToPlayer ? Service.ClientState.LocalPlayer : null;
-        var origin = originActor?.Position ?? new();
-        var offset = new Vector3(float.Parse(args[1], CultureInfo.InvariantCulture), float.Parse(args[2], CultureInfo.InvariantCulture), float.Parse(args[3], CultureInfo.InvariantCulture));
+        var origin = originActor?.Position ?? new Vector3();
+        var offset = new Vector3(float.Parse(args[1], CultureInfo.InvariantCulture),
+            float.Parse(args[2], CultureInfo.InvariantCulture), float.Parse(args[3], CultureInfo.InvariantCulture));
         var route = new GatherRouteDB.Route { Name = "Temporary", Waypoints = [] };
-        route.Waypoints.Add(new() { Position = origin + offset, Radius = 0.5f, InteractWithName = "", InteractWithOID = 0 });
+        route.Waypoints.Add(new GatherRouteDB.Waypoint
+            { Position = origin + offset, Radius = 0.5f, InteractWithName = "", InteractWithOID = 0 });
         _wndGather.Exec.Start(route, 0, false, false);
     }
 

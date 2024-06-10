@@ -16,7 +16,7 @@ unsafe class ExportWindow : UIAttachedWindow
     private ExportDebug _debug = new();
     private Throttle _exportThrottle = new(); // export seems to close & reopen window?..
 
-    public ExportWindow() : base("Exports Automation", "MJIDisposeShop", new(400, 600))
+    public ExportWindow() : base("出口自动化", "MJIDisposeShop", new(400, 600))
     {
         _config = Service.Config.Get<ExportConfig>();
     }
@@ -41,7 +41,7 @@ unsafe class ExportWindow : UIAttachedWindow
         using var tabs = ImRaii.TabBar("Tabs");
         if (tabs)
         {
-            using (var tab = ImRaii.TabItem("Main"))
+            using (var tab = ImRaii.TabItem("主界面"))
                 if (tab)
                     DrawMain();
             using (var tab = ImRaii.TabItem("Debug"))
@@ -52,20 +52,20 @@ unsafe class ExportWindow : UIAttachedWindow
 
     private void DrawMain()
     {
-        if (ImGui.Checkbox("Auto Export", ref _config.AutoSell))
+        if (ImGui.Checkbox("满足条件时自动出口", ref _config.AutoSell))
             _config.NotifyModified();
         ImGui.PushItemWidth(150);
-        if (ImGui.SliderInt("Sell normal above", ref _config.NormalLimit, 0, 999))
+        if (ImGui.SliderInt("一般物品多于...时", ref _config.NormalLimit, 0, 999))
             _config.NotifyModified();
-        if (ImGui.SliderInt("Sell granary above", ref _config.GranaryLimit, 0, 999))
+        if (ImGui.SliderInt("囤货仓库物品多于...时", ref _config.GranaryLimit, 0, 999))
             _config.NotifyModified();
-        if (ImGui.SliderInt("Sell farm above", ref _config.FarmLimit, 0, 999))
+        if (ImGui.SliderInt("耕地物品多于...时", ref _config.FarmLimit, 0, 999))
             _config.NotifyModified();
-        if (ImGui.SliderInt("Sell pasture above", ref _config.PastureLimit, 0, 999))
+        if (ImGui.SliderInt("牧场物品多于...时", ref _config.PastureLimit, 0, 999))
             _config.NotifyModified();
         ImGui.PopItemWidth();
 
-        if (ImGui.Button("Sell everything above configured limits"))
+        if (ImGui.Button("出口当前所有高于设定值的物品"))
             AutoExport();
     }
 
@@ -82,8 +82,8 @@ unsafe class ExportWindow : UIAttachedWindow
         }
         catch (Exception ex)
         {
-            Service.Log.Error($"Error: {ex}");
-            Service.ChatGui.PrintError($"Auto export error: {ex.Message}");
+            Service.Log.Error($"错误: {ex}");
+            Service.ChatGui.PrintError($"自动出口时出现错误: {ex.Message}");
         }
     }
 
@@ -111,24 +111,23 @@ unsafe class ExportWindow : UIAttachedWindow
             {
                 islanderCowries += value;
                 if (islanderCowries > data->CurrencyStackSize[1])
-                    throw new Exception($"Islander cowries would overcap");
+                    throw new Exception($"谢尔达莱绿岛币即将超限");
             }
             else
             {
                 seafarerCowries += value;
                 if (seafarerCowries > data->CurrencyStackSize[0])
-                    throw new Exception($"Seafarer cowries would overcap");
+                    throw new Exception($"谢尔达莱青船币即将超限");
             }
 
             args.Add(new() { Type = AtkValueType.UInt, UInt = item.Value->ShopItemRowId });
             args.Add(new() { Type = AtkValueType.UInt, Int = export });
             if (++numItems > 64)
-                throw new Exception($"Too many items to export, please report this as a bug!");
+                throw new Exception($"待出口物品过多, 请上报此错误!");
         }
         var argsSpan = CollectionsMarshal.AsSpan(args);
         argsSpan[0].Int = numItems;
 
-        Service.Log.Info($"Exporting {numItems} items above {limit} limit...");
         var listener = *(AgentInterface**)((nint)agent + 0x18);
         Utils.SynthesizeEvent(listener, 0, argsSpan);
     }

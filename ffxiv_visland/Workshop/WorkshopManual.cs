@@ -13,7 +13,7 @@ public class WorkshopManual
 
     public void Draw()
     {
-        ImGui.InputText("Filter", ref _filter, 256);
+        ImGui.InputText("搜索", ref _filter, 256);
         var sheetCraft = Service.LuminaGameData.GetExcelSheet<MJICraftworksObject>()!;
         foreach (var row in sheetCraft)
         {
@@ -24,7 +24,7 @@ public class WorkshopManual
         }
 
         ImGui.Separator();
-        ImGui.TextUnformatted("Recent items:");
+        ImGui.TextUnformatted("最近:");
         foreach (var i in _recents.ToArray()) // copy, since we might modify it...
         {
             DrawRowCraft(sheetCraft.GetRow(i)!, true);
@@ -78,7 +78,7 @@ public class WorkshopManual
             ++startingCycle;
         if (startingCycle > maxCycle)
         {
-            ReportError($"No free spots in workshop {workshopIndex + 1}");
+            ReportError($"{workshopIndex + 1} 已无空余档位");
             return;
         }
 

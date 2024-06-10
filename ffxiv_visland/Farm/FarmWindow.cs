@@ -13,7 +13,7 @@ public unsafe class FarmWindow : UIAttachedWindow
     private FarmConfig _config;
     private FarmDebug _debug = new();
 
-    public FarmWindow() : base("Farm Automation", "MJIFarmManagement", new(400, 600))
+    public FarmWindow() : base("耕地自动化", "MJIFarmManagement", new(400, 600))
     {
         _config = Service.Config.Get<FarmConfig>();
     }
@@ -35,7 +35,7 @@ public unsafe class FarmWindow : UIAttachedWindow
         using var tabs = ImRaii.TabBar("Tabs");
         if (tabs)
         {
-            using (var tab = ImRaii.TabItem("Main"))
+            using (var tab = ImRaii.TabItem("主界面"))
                 if (tab)
                     DrawMain();
             using (var tab = ImRaii.TabItem("Debug"))
@@ -46,7 +46,7 @@ public unsafe class FarmWindow : UIAttachedWindow
 
     private void DrawMain()
     {
-        if (UICombo.Enum("Auto Collect", ref _config.Collect))
+        if (UICombo.Enum("自动收取", ref _config.Collect))
             _config.NotifyModified();
         ImGui.Separator();
 
@@ -54,7 +54,7 @@ public unsafe class FarmWindow : UIAttachedWindow
         var agent = AgentMJIFarmManagement.Instance();
         if (mji == null || mji->FarmState == null || mji->IslandState.Farm.EligibleForCare == 0 || agent == null)
         {
-            ImGui.TextUnformatted("Mammets not available!");
+            ImGui.TextUnformatted("自走人偶当前不可用");
             return;
         }
 
@@ -71,13 +71,13 @@ public unsafe class FarmWindow : UIAttachedWindow
             // if there's uncollected stuff - propose to collect everything
             using (ImRaii.Disabled(res == CollectResult.EverythingCapped))
             {
-                if (ImGui.Button("Collect all"))
+                if (ImGui.Button("收取全部"))
                     CollectAll();
                 if (res != CollectResult.CanCollectSafely)
                 {
                     ImGui.SameLine();
                     using (ImRaii.PushColor(ImGuiCol.Text, 0xff0000ff))
-                        ImGuiEx.TextV(res == CollectResult.EverythingCapped ? "Inventory is full!" : "Warning: some resources will overcap!");
+                        ImGuiEx.TextV(res == CollectResult.EverythingCapped ? "背包已满!" : "警告: 部分资源即将超限!");
                 }
             }
         }
@@ -93,11 +93,11 @@ public unsafe class FarmWindow : UIAttachedWindow
             }
 
             using (ImRaii.Disabled(!canDismiss))
-                if (ImGui.Button("Dismiss all"))
+                if (ImGui.Button("取消托管全部"))
                     DismissAll();
             ImGui.SameLine();
             using (ImRaii.Disabled(!canEntrust))
-                if (ImGui.Button("Entrust all"))
+                if (ImGui.Button("托管全部"))
                     EntrustAll();
         }
     }
@@ -130,23 +130,23 @@ public unsafe class FarmWindow : UIAttachedWindow
                 {
                     using (ImRaii.Disabled(full))
                     {
-                        if (ImGui.Button($"Collect##{i}"))
+                        if (ImGui.Button($"收取##{i}"))
                             CollectOne(i, false);
                         ImGui.SameLine();
-                        if (ImGui.Button($"Collect & dismiss##{i}"))
+                        if (ImGui.Button($"收取并取消托管##{i}"))
                             CollectOne(i, true);
                     }
                 }
                 else if (slot.UnderCare)
                 {
-                    if (ImGui.Button($"Dismiss##{i}"))
+                    if (ImGui.Button($"取消托管##{i}"))
                         DismissOne(i);
                 }
                 else if (slot.SeedItemId != 0)
                 {
                     if (slot.WasUnderCare || Utils.NumCowries() >= 5)
                     {
-                        if (ImGui.Button($"Entrust##{i}"))
+                        if (ImGui.Button($"托管##{i}"))
                             EntrustOne(i, slot.SeedItemId);
                     }
                     // else: not enough cowries
@@ -193,7 +193,7 @@ public unsafe class FarmWindow : UIAttachedWindow
         var mji = MJIManager.Instance();
         if (mji != null && mji->FarmState != null)
         {
-            Service.Log.Info($"Collecting slot {slot}, dismiss={dismissAfter}");
+            Service.Log.Info($"正在收取第 {slot} 格, 取消托管={dismissAfter}");
             if (dismissAfter)
                 mji->FarmState->CollectSingleAndDismiss((uint)slot);
             else
@@ -206,7 +206,7 @@ public unsafe class FarmWindow : UIAttachedWindow
         var mji = MJIManager.Instance();
         if (mji != null && mji->FarmState != null)
         {
-            Service.Log.Info("Collecting everything from farm");
+            Service.Log.Info("正在从耕地收取所有物品");
             mji->FarmState->UpdateExpectedTotalYield();
             mji->FarmState->CollectAll(true);
         }
@@ -217,7 +217,7 @@ public unsafe class FarmWindow : UIAttachedWindow
         var mji = MJIManager.Instance();
         if (mji != null && mji->FarmState != null)
         {
-            Service.Log.Info($"Dismissing slot {slot}");
+            Service.Log.Info($"正在取消托管第 {slot} 格");
             mji->FarmState->Dismiss((uint)slot);
         }
     }
@@ -227,7 +227,6 @@ public unsafe class FarmWindow : UIAttachedWindow
         var mji = MJIManager.Instance();
         if (mji != null && mji->FarmState != null)
         {
-            Service.Log.Info($"Dismissing all");
             for (int i = 0; i < 20; ++i)
             {
                 if (mji->FarmState->FarmSlotFlagsSpan[i].HasFlag(FarmSlotFlags.UnderCare))
@@ -241,7 +240,6 @@ public unsafe class FarmWindow : UIAttachedWindow
         var mji = MJIManager.Instance();
         if (mji != null && mji->FarmState != null)
         {
-            Service.Log.Info($"Entrusting slot {slot}, planting {seedId}");
             mji->FarmState->Entrust((uint)slot, seedId);
         }
     }
@@ -251,7 +249,6 @@ public unsafe class FarmWindow : UIAttachedWindow
         var mji = MJIManager.Instance();
         if (mji != null && mji->FarmState != null)
         {
-            Service.Log.Info($"Entrusting all");
             for (int i = 0; i < 20; ++i)
             {
                 var seed = mji->FarmState->SeedType[i];

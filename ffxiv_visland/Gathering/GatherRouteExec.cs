@@ -247,7 +247,13 @@ public class GatherRouteExec : IDisposable
 
     private unsafe void ExecuteActionSafe(ActionType type, uint id) => _action.Exec(() => ActionManager.Instance()->UseAction(type, id));
     private void ExecuteIslandSprint() => ExecuteActionSafe(ActionType.Action, 31314);
-    private void ExecuteMount() => ExecuteActionSafe(ActionType.GeneralAction, 24); // flying mount roulette
+    private void ExecuteMount()
+    {
+        if (RouteDB.SelectedMount <= 0)
+            ExecuteActionSafe(ActionType.GeneralAction, 24);
+        else
+            ExecuteActionSafe(ActionType.Mount, (uint)RouteDB.SelectedMount);
+    }
     private void ExecuteDismount() => ExecuteActionSafe(ActionType.GeneralAction, 23);
     private void ExecuteJump() => ExecuteActionSafe(ActionType.GeneralAction, 2);
     private void ExecuteSprint() => ExecuteActionSafe(ActionType.GeneralAction, 4);

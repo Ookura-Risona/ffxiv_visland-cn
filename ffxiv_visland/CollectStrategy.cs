@@ -4,12 +4,12 @@ namespace visland;
 
 public enum CollectStrategy
 {
-    [Description("Manual")]
+    [Description("手动")]
     Manual,
 
-    [Description("Automatic, if not overcapping")]
+    [Description("自动 (禁止超限)")]
     NoOvercap,
 
-    [Description("Automatic, allow overcap")]
+    [Description("自动 (允许超限)")]
     FullAuto,
 }

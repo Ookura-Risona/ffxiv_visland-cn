@@ -7,16 +7,16 @@ public class GranaryConfig : Configuration.Node
 {
     public enum UpdateStrategy
     {
-        [Description("Manual")]
+        [Description("手动")]
         Manual,
 
-        [Description("Max out, keep same destination")]
+        [Description("自动 (目的地: 上次派遣地点)")]
         MaxCurrent,
 
-        [Description("Max out and select expedition bringing rare resources with two lowest counts")]
+        [Description("自动 (目的地: 数量最少的稀有资源)")]
         BestDifferent,
 
-        [Description("Max out and select expedition bringing rare resource with lowest count in both granaries")]
+        [Description("自动 (目的地: 全部仓库中数量最少的稀有资源)")]
         BestSame,
     }
 
