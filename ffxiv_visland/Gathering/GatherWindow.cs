@@ -153,7 +153,7 @@ public class GatherWindow : Window, IDisposable
                 try
                 {
                     var import = JsonConvert.DeserializeObject<Route>(ImGui.GetClipboardText());
-                    RouteDB.Routes.Add(new Route { Name = import!.Name, Waypoints = import.Waypoints });
+                    RouteDB.Routes.Add(new() { Name = import!.Name, Group = import.Group, Waypoints = import.Waypoints });
                     RouteDB.NotifyModified();
                 }
                 catch (JsonReaderException ex)
@@ -167,9 +167,9 @@ public class GatherWindow : Window, IDisposable
                 if (ImGui.IsMouseClicked(ImGuiMouseButton.Right))
                     try
                     {
-                        var import =
-                            JsonConvert.DeserializeObject<Route>(ImGui.GetClipboardText().FromCompressedBase64());
-                        RouteDB.Routes.Add(new Route { Name = import!.Name, Waypoints = import.Waypoints });
+
+                        var import = JsonConvert.DeserializeObject<Route>(Utils.FromCompressedBase64(ImGui.GetClipboardText()));
+                        RouteDB.Routes.Add(new() { Name = import!.Name, Group = import.Group, Waypoints = import.Waypoints });
                         RouteDB.NotifyModified();
                     }
                     catch (JsonReaderException ex)
@@ -194,7 +194,8 @@ public class GatherWindow : Window, IDisposable
                 FilteredRoutes.Clear();
                 if (searchString.Length > 0)
                     foreach (var route in RouteDB.Routes)
-                        if (route.Name.Contains(searchString, StringComparison.CurrentCultureIgnoreCase))
+                    {
+                        if (route.Name.Contains(searchString, System.StringComparison.CurrentCultureIgnoreCase) || route.Group.Contains(searchString, System.StringComparison.CurrentCultureIgnoreCase))
                             FilteredRoutes.Add(route);
             }
 
@@ -202,14 +203,37 @@ public class GatherWindow : Window, IDisposable
 
             using (ImRaii.Child("routes"))
             {
-                for (var i = 0; i < (FilteredRoutes.Count > 0 ? FilteredRoutes.Count : RouteDB.Routes.Count); i++)
+                List<string> groups = [];
+                for (var g = 0; g < (FilteredRoutes.Count > 0 ? FilteredRoutes.Count : RouteDB.Routes.Count); g++)
                 {
                     var routeSource = FilteredRoutes.Count > 0 ? FilteredRoutes : RouteDB.Routes;
-                    var route = routeSource[i];
-                    var selectedRoute = ImGui.Selectable($"{route.Name} (共 {route.Waypoints.Count} 步)###{i}",
-                        i == selectedRouteIndex);
-                    if (selectedRoute)
-                        selectedRouteIndex = i;
+                    if (string.IsNullOrEmpty(routeSource[g].Group))
+                    {
+                        routeSource[g].Group = "None";
+                    }
+                    if (!groups.Contains(routeSource[g].Group))
+                    {
+                        groups.Add(routeSource[g].Group);
+                    }
+                }
+                groups = [.. groups.OrderBy(i => i == "None").ThenBy(i => i)]; //Sort with None at the End
+                foreach (var group in groups)
+                {
+                    foreach (var wn in _tree.Node($"{group}###{groups.IndexOf(group)}"))
+                    {
+                        var routeSource = FilteredRoutes.Count > 0 ? FilteredRoutes : RouteDB.Routes;
+                        for (var i = 0; i < routeSource.Count; i++)
+                        {
+                            var route = routeSource[i];
+                            var routeGroup = string.IsNullOrEmpty(route.Group) ? "None" : route.Group;
+                            if (routeGroup == group)
+                            {
+                                var selectedRoute = ImGui.Selectable($"{route.Name} (共 {route.Waypoints.Count} 步)###{i}", i == selectedRouteIndex);
+                                if (selectedRoute)
+                                    selectedRouteIndex = i;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -323,11 +347,12 @@ public class GatherWindow : Window, IDisposable
             }
 
             var name = route.Name;
-            var movementType = Service.Condition[ConditionFlag.InFlight] ? Movement.MountFly :
-                Service.Condition[ConditionFlag.Mounted] ? Movement.MountNoFly : Movement.Normal;
+            
+            var group = route.Group;
+            var movementType = Service.Condition[ConditionFlag.InFlight] ? Movement.MountFly : Service.Condition[ConditionFlag.Mounted] ? Movement.MountNoFly : Movement.Normal;
             ImGuiEx.TextV("名称: ");
             ImGui.SameLine();
-            if (ImGui.InputText("", ref name, 256))
+            if (ImGui.InputText("##name", ref name, 256))
             {
                 route.Name = name;
                 RouteDB.NotifyModified();
@@ -368,6 +393,14 @@ public class GatherWindow : Window, IDisposable
             }
 
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("+步骤: 与目标交互");
+
+            ImGuiEx.TextV("Group: ");
+            ImGui.SameLine();
+            if (ImGui.InputText("##group", ref group, 256))
+            {
+                route.Group = group;
+                RouteDB.NotifyModified();
+            }
 
             using (ImRaii.Child("waypoints"))
             {
@@ -425,6 +458,7 @@ public class GatherWindow : Window, IDisposable
                 var target = Service.TargetManager.Target;
                 if (target != null)
                 {
+                    wp.InteractWithName = target.Name.ToString().ToLower();
                     wp.InteractWithOID = target.DataId;
                     RouteDB.NotifyModified();
                 }
