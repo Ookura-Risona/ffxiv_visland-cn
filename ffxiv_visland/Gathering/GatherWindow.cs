@@ -195,8 +195,10 @@ public class GatherWindow : Window, IDisposable
                 if (searchString.Length > 0)
                     foreach (var route in RouteDB.Routes)
                     {
-                        if (route.Name.Contains(searchString, System.StringComparison.CurrentCultureIgnoreCase) || route.Group.Contains(searchString, System.StringComparison.CurrentCultureIgnoreCase))
+                        if (route.Name.Contains(searchString, System.StringComparison.CurrentCultureIgnoreCase) ||
+                            route.Group.Contains(searchString, System.StringComparison.CurrentCultureIgnoreCase))
                             FilteredRoutes.Add(route);
+                    }
             }
 
             ImGui.Separator();
