@@ -53,7 +53,7 @@ public sealed class Plugin : IDalamudPlugin
         var dalamudRoot =
             dalamud.GetType().Assembly.GetType("Dalamud.Service`1", true)!
                 .MakeGenericType(dalamud.GetType().Assembly.GetType("Dalamud.Dalamud", true)!).GetMethod("Get")!
-                .Invoke(null, BindingFlags.Default, null, Array.Empty<object>(), null);
+                .Invoke(null, BindingFlags.Default, null, [], null);
         var dalamudStartInfo = dalamudRoot.GetFoP<DalamudStartInfo>("StartInfo");
 
         ECommonsMain.Init(dalamud, this, Module.DalamudReflector);
