@@ -33,15 +33,9 @@ unsafe class WorkshopWindow : UIAttachedWindow
         using (var tab = ImRaii.TabItem("使用预设"))
             if (tab)
                 _oc.Draw();
-        using (var tab = ImRaii.TabItem("手动安排"))
-            if (tab)
-                _manual.Draw();
         using (var tab = ImRaii.TabItem("设置"))
             if (tab)
                 DrawSettings();
-        using (var tab = ImRaii.TabItem("Debug"))
-            if (tab)
-                _debug.Draw();
     }
 
     public override void OnOpen()
@@ -60,9 +54,7 @@ unsafe class WorkshopWindow : UIAttachedWindow
     {
         if (ImGui.Checkbox("开启时自动选择下一周期", ref _config.AutoOpenNextDay))
             _config.NotifyModified();
-        if (ImGui.Checkbox("开启时自动导入基础需求", ref _config.AutoImport))
-            _config.NotifyModified();
-        if (ImGui.Checkbox("使用实验性求解器", ref _config.UseFavorSolver))
+        if (ImGui.Checkbox("开启窗口时自动尝试导入剪贴板内容", ref _config.AutoImport))
             _config.NotifyModified();
     }
 }
