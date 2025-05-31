@@ -44,7 +44,7 @@ unsafe class PastureWindow : UIAttachedWindow
             using (var tab = ImRaii.TabItem("主界面"))
                 if (tab)
                     DrawMain();
-            using (var tab = ImRaii.TabItem("Debug"))
+            using (var tab = ImRaii.TabItem("调试"))
                 if (tab)
                     _debug.Draw();
         }
@@ -98,9 +98,9 @@ unsafe class PastureWindow : UIAttachedWindow
         if (mji == null || mji->PastureHandler == null)
             return CollectResult.NothingToCollect;
 
-        bool haveNone = true;
-        bool anyOvercap = false;
-        bool allFull = true;
+        var haveNone = true;
+        var anyOvercap = false;
+        var allFull = true;
         foreach (var (itemId, count) in mji->PastureHandler->AvailableMammetLeavings)
         {
             if (count <= 0)

@@ -44,7 +44,7 @@ unsafe class ExportWindow : UIAttachedWindow
             using (var tab = ImRaii.TabItem("主界面"))
                 if (tab)
                     DrawMain();
-            using (var tab = ImRaii.TabItem("Debug"))
+            using (var tab = ImRaii.TabItem("调试"))
                 if (tab)
                     _debug.Draw();
         }
@@ -74,7 +74,7 @@ unsafe class ExportWindow : UIAttachedWindow
         try
         {
             var data = AgentMJIDisposeShop.Instance()->Data;
-            int seafarerCowries = data->CurrencyCount[0], islanderCowries = data->CurrencyCount[1];
+            int seafarerCowries = data->CurrencyCounts[0], islanderCowries = data->CurrencyCounts[1];
             AutoExportCategory(0, _config.NormalLimit, ref seafarerCowries, ref islanderCowries);
             AutoExportCategory(1, _config.GranaryLimit, ref seafarerCowries, ref islanderCowries);
             AutoExportCategory(2, _config.FarmLimit, ref seafarerCowries, ref islanderCowries);
@@ -98,8 +98,8 @@ unsafe class ExportWindow : UIAttachedWindow
             new() { Type = AtkValueType.UInt },
             new() { Type = AtkValueType.UInt, Int = limit }
         ];
-        int numItems = 0;
-        foreach (var item in data->PerCategoryItemsSpan[category].Span)
+        var numItems = 0;
+        foreach (var item in data->PerCategoryItems[category].AsSpan())
         {
             var count = Utils.NumItems(item.Value->ItemId);
             if (count <= limit)
@@ -110,13 +110,13 @@ unsafe class ExportWindow : UIAttachedWindow
             if (item.Value->UseIslanderCowries)
             {
                 islanderCowries += value;
-                if (islanderCowries > data->CurrencyStackSize[1])
+                if (islanderCowries > data->CurrencyStackSizes[1])
                     throw new Exception($"谢尔达莱绿岛币即将超限");
             }
             else
             {
                 seafarerCowries += value;
-                if (seafarerCowries > data->CurrencyStackSize[0])
+                if (seafarerCowries > data->CurrencyStackSizes[0])
                     throw new Exception($"谢尔达莱青船币即将超限");
             }
 
@@ -128,6 +128,7 @@ unsafe class ExportWindow : UIAttachedWindow
         var argsSpan = CollectionsMarshal.AsSpan(args);
         argsSpan[0].Int = numItems;
 
+        Service.Log.Info($"Exporting {numItems} items above {limit} limit...");
         var listener = *(AgentInterface**)((nint)agent + 0x18);
         Utils.SynthesizeEvent(listener, 0, argsSpan);
     }

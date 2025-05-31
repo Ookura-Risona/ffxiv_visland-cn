@@ -3,7 +3,7 @@ using ECommons.ImGuiMethods;
 using FFXIVClientStructs.FFXIV.Client.Game.MJI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using ImGuiNET;
-using Lumina.Excel.GeneratedSheets2;
+using Lumina.Excel.Sheets;
 using visland.Helpers;
 
 namespace visland.Farm;
@@ -38,7 +38,7 @@ public unsafe class FarmWindow : UIAttachedWindow
             using (var tab = ImRaii.TabItem("主界面"))
                 if (tab)
                     DrawMain();
-            using (var tab = ImRaii.TabItem("Debug"))
+            using (var tab = ImRaii.TabItem("调试"))
                 if (tab)
                     _debug.Draw();
         }
@@ -85,11 +85,11 @@ public unsafe class FarmWindow : UIAttachedWindow
         {
             bool canDismiss = false, canEntrust = false;
             var agent = AgentMJIFarmManagement.Instance();
-            for (int i = 0; i < agent->NumSlots; ++i)
+            for (var i = 0; i < agent->NumSlots; ++i)
             {
-                bool cared = agent->SlotsSpan[i].UnderCare;
+                var cared = agent->Slots[i].UnderCare;
                 canDismiss |= cared;
-                canEntrust |= !cared && agent->SlotsSpan[i].SeedItemId != 0;
+                canEntrust |= !cared && agent->Slots[i].SeedItemId != 0;
             }
 
             using (ImRaii.Disabled(!canDismiss))
@@ -107,17 +107,17 @@ public unsafe class FarmWindow : UIAttachedWindow
         using var table = ImRaii.Table("table", 2);
         if (table)
         {
-            ImGui.TableSetupColumn("Slot");
-            ImGui.TableSetupColumn("Operations");
+            ImGui.TableSetupColumn("地垄");
+            ImGui.TableSetupColumn("操作");
             ImGui.TableHeadersRow();
 
             var agent = AgentMJIFarmManagement.Instance();
-            for (int i = 0; i < agent->NumSlots; ++i)
+            for (var i = 0; i < agent->NumSlots; ++i)
             {
-                ref var slot = ref agent->SlotsSpan[i];
+                ref var slot = ref agent->Slots[i];
                 var inventory = Utils.NumItems(slot.YieldItemId);
-                bool overcap = inventory + slot.YieldAvailable > 999;
-                bool full = inventory == 999;
+                var overcap = inventory + slot.YieldAvailable > 999;
+                var full = inventory == 999;
 
                 ImGui.TableNextRow();
 
@@ -164,8 +164,8 @@ public unsafe class FarmWindow : UIAttachedWindow
             return CollectResult.NothingToCollect;
 
         var sheet = Service.LuminaGameData.GetExcelSheet<MJICropSeed>()!;
-        var perCropYield = new int[sheet.RowCount];
-        for (int i = 0; i < 20; ++i)
+        var perCropYield = new int[sheet.Count];
+        for (var i = 0; i < 20; ++i)
         {
             var seed = mji->FarmState->SeedType[i];
             if (seed != 0)
@@ -174,14 +174,14 @@ public unsafe class FarmWindow : UIAttachedWindow
             }
         }
 
-        bool anyOvercap = false;
-        bool allFull = true;
-        for (int i = 1; i < perCropYield.Length; ++i)
+        var anyOvercap = false;
+        var allFull = true;
+        for (var i = 1; i < perCropYield.Length; ++i)
         {
             if (perCropYield[i] == 0)
                 continue;
 
-            var inventory = Utils.NumItems(sheet.GetRow((uint)i)!.Item.Row);
+            var inventory = Utils.NumItems(sheet.GetRow((uint)i)!.Item.RowId);
             allFull &= inventory >= 999;
             anyOvercap |= inventory + perCropYield[i] > 999;
         }
@@ -227,9 +227,10 @@ public unsafe class FarmWindow : UIAttachedWindow
         var mji = MJIManager.Instance();
         if (mji != null && mji->FarmState != null)
         {
-            for (int i = 0; i < 20; ++i)
+            Service.Log.Info($"Dismissing all");
+            for (var i = 0; i < 20; ++i)
             {
-                if (mji->FarmState->FarmSlotFlagsSpan[i].HasFlag(FarmSlotFlags.UnderCare))
+                if (mji->FarmState->FarmSlotFlags[i].HasFlag(FarmSlotFlags.UnderCare))
                     mji->FarmState->Dismiss((uint)i);
             }
         }
@@ -240,6 +241,7 @@ public unsafe class FarmWindow : UIAttachedWindow
         var mji = MJIManager.Instance();
         if (mji != null && mji->FarmState != null)
         {
+            Service.Log.Info($"Entrusting slot {slot}, planting {seedId}");
             mji->FarmState->Entrust((uint)slot, seedId);
         }
     }
@@ -249,12 +251,13 @@ public unsafe class FarmWindow : UIAttachedWindow
         var mji = MJIManager.Instance();
         if (mji != null && mji->FarmState != null)
         {
-            for (int i = 0; i < 20; ++i)
+            Service.Log.Info($"Entrusting all");
+            for (var i = 0; i < 20; ++i)
             {
                 var seed = mji->FarmState->SeedType[i];
-                if (seed != 0 && !mji->FarmState->FarmSlotFlagsSpan[i].HasFlag(FarmSlotFlags.UnderCare))
+                if (seed != 0 && !mji->FarmState->FarmSlotFlags[i].HasFlag(FarmSlotFlags.UnderCare))
                 {
-                    mji->FarmState->Entrust((uint)i, mji->FarmState->SeedItemIds.Span[seed]);
+                    mji->FarmState->Entrust((uint)i, mji->FarmState->SeedItemIds.AsSpan()[seed]);
                 }
             }
         }

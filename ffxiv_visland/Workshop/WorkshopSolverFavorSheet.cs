@@ -1,5 +1,5 @@
 ﻿using Lumina.Excel;
-using Lumina.Excel.GeneratedSheets2;
+using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,35 +25,35 @@ public class WorkshopSolverFavorSheet
     {
         _sheet = Service.LuminaGameData.GetExcelSheet<MJICraftworksObject>()!;
         Popularity = state.Popularity;
-        Favors = state.CraftObjectIds.Select(i => i > 0 ? _sheet.GetRow(i)! : null!).ToArray();
-        if (Favors.Any(o => o == null))
+        if (state.CraftObjectIds.Any(i => i == 0))
             throw new Exception("Invalid state");
+        Favors = state.CraftObjectIds.Select(i => _sheet.GetRow(i)).ToArray();            
 
-        Complete = state.CompletedCounts.ToArray();
+        Complete = [.. state.CompletedCounts];
         Links = Favors.Select(BuildLinks).ToArray();
         Recs = [];
 
         var f4 = state.CraftObjectIds[0];
         var f6 = state.CraftObjectIds[1];
         var f8 = state.CraftObjectIds[2];
-        var f4l4 = Links[0][0].FirstOrDefault()?.RowId ?? 0;
-        var f4l6 = Links[0][1].FirstOrDefault()?.RowId ?? 0;
-        var f4l8 = Links[0][2].FirstOrDefault()?.RowId ?? 0;
-        var f6l4 = Links[1][0].FirstOrDefault()?.RowId ?? 0;
-        var f6l4alt = Links[1][0].Skip(1).FirstOrDefault()?.RowId ?? 0;
-        var f6l6 = Links[1][1].FirstOrDefault()?.RowId ?? 0;
-        var f6l8 = Links[1][2].FirstOrDefault()?.RowId ?? 0;
-        var f8l4 = Links[2][0].FirstOrDefault()?.RowId ?? 0;
-        var f8l6 = Links[2][1].FirstOrDefault()?.RowId ?? 0;
+        var f4l4 = Links[0][0].FirstOrDefault().RowId;
+        var f4l6 = Links[0][1].FirstOrDefault().RowId;
+        var f4l8 = Links[0][2].FirstOrDefault().RowId;
+        var f6l4 = Links[1][0].FirstOrDefault().RowId;
+        var f6l4alt = Links[1][0].Skip(1).FirstOrDefault().RowId;
+        var f6l6 = Links[1][1].FirstOrDefault().RowId;
+        var f6l8 = Links[1][2].FirstOrDefault().RowId;
+        var f8l4 = Links[2][0].FirstOrDefault().RowId;
+        var f8l6 = Links[2][1].FirstOrDefault().RowId;
 
-        bool link46 = WorkshopSolver.IsLinked(Favors[0], Favors[1]);
-        bool link48 = WorkshopSolver.IsLinked(Favors[0], Favors[2]);
-        bool link68 = WorkshopSolver.IsLinked(Favors[1], Favors[2]);
-        bool noLinksNo48 = f6l4alt == 0 || f8l4 == 0 || f8l6 == 0; // very weird condition...
-        bool allLinks = link46 && link48 && link68;
-        bool noLinks = !link46 && !link48 && !link68;
-        bool link68No84 = link68 && f8l4 == 0;
-        bool link48No68 = link48 && f6l8 == 0; // TODO: sheet checks f6l6, i think this is a bug
+        var link46 = WorkshopSolver.IsLinked(Favors[0], Favors[1]);
+        var link48 = WorkshopSolver.IsLinked(Favors[0], Favors[2]);
+        var link68 = WorkshopSolver.IsLinked(Favors[1], Favors[2]);
+        var noLinksNo48 = f6l4alt == 0 || f8l4 == 0 || f8l6 == 0; // very weird condition...
+        var allLinks = link46 && link48 && link68;
+        var noLinks = !link46 && !link48 && !link68;
+        var link68No84 = link68 && f8l4 == 0;
+        var link48No68 = link48 && f6l8 == 0; // TODO: sheet checks f6l6, i think this is a bug
         Plan = link68No84 ? Strategy.Link68_NoF8L4  // this seems to have been added in r2
             : link48No68 ? Strategy.Link48_NoF6L8  // this seems to have been added in r3
             : noLinksNo48 ? Strategy.NoLinks_No48 // this seems to have been added in r1
@@ -138,23 +138,24 @@ public class WorkshopSolverFavorSheet
     private void AddDay(params uint[] objs)
     {
         var rec = new WorkshopSolver.WorkshopRec();
-        int hour = 0;
+        var hour = 0;
         MJICraftworksObject? prev = null;
         foreach (var obj in objs)
         {
-            var o = obj > 0 ? _sheet.GetRow(obj) : null;
-            if (o == null)
+            if (obj == 0)
                 throw new Exception($"Invalid obj id {obj}");
-
-            rec.Add(hour, obj);
-            var iFav = Array.FindIndex(Favors, o => o.RowId == obj);
-            if (iFav >= 0)
+            if (_sheet.TryGetRow(obj, out var row))
             {
-                var efficient = prev != null && WorkshopSolver.IsLinked(prev, o);
-                Complete[iFav] += efficient ? 2 : 1;
+                rec.Add(hour, obj);
+                var iFav = Array.FindIndex(Favors, o => o.RowId == obj);
+                if (iFav >= 0)
+                {
+                    var efficient = prev != null && WorkshopSolver.IsLinked((MJICraftworksObject)prev, row);
+                    Complete[iFav] += efficient ? 2 : 1;
+                }
+                hour += row.CraftingTime;
+                prev = row;
             }
-            hour += o.CraftingTime;
-            prev = o;
         }
         if (hour != 24)
             throw new Exception($"Bad schedule: {hour}h");
@@ -165,7 +166,7 @@ public class WorkshopSolverFavorSheet
     {
         if (Plan != plan)
         {
-            Service.Log.Warning($"I fucked up: expected plan {plan}, have {Plan} - for {string.Join(", ", Favors.Select(f => f.Item.Value?.Name))}");
+            Service.Log.Warning($"I fucked up: expected plan {plan}, have {Plan} - for {string.Join(", ", Favors.Select(f => f.Item.Value.Name))}");
             Plan = plan;
         }
         AddDay(objs);

@@ -10,6 +10,8 @@ namespace visland.IPC;
 internal class NavmeshIPC
 {
     internal static readonly string Name = "vnavmesh";
+    internal static bool IsEnabled => Utils.HasPlugin(Name);
+    // nav
     private static ICallGateSubscriber<bool>? _navIsReady;
     private static ICallGateSubscriber<float>? _navBuildProgress;
     private static ICallGateSubscriber<bool>? _navReload;
@@ -18,9 +20,12 @@ internal class NavmeshIPC
     private static ICallGateSubscriber<bool>? _navIsAutoLoad;
     private static ICallGateSubscriber<bool, object>? _navSetAutoLoad;
 
+    // query
     private static ICallGateSubscriber<Vector3, float, float, Vector3?>? _queryMeshNearestPoint;
-    private static ICallGateSubscriber<Vector3, float, Vector3?>? _queryMeshPointOnFloor;
+    private static ICallGateSubscriber<Vector3, bool, float, Vector3?>? _queryMeshPointOnFloor;
+    private static ICallGateSubscriber<Vector3, float, float, float, Vector3?>? _queryMeshFurthestPoint;
 
+    // path
     private static ICallGateSubscriber<List<Vector3>, bool, object>? _pathMoveTo;
     private static ICallGateSubscriber<object>? _pathStop;
     private static ICallGateSubscriber<bool>? _pathIsRunning;
@@ -32,6 +37,7 @@ internal class NavmeshIPC
     private static ICallGateSubscriber<float>? _pathGetTolerance;
     private static ICallGateSubscriber<float, object>? _pathSetTolerance;
 
+    // simplemove
     private static ICallGateSubscriber<Vector3, bool, bool>? _pathfindAndMoveTo;
     private static ICallGateSubscriber<bool>? _pathfindInProgress;
 
@@ -50,7 +56,8 @@ internal class NavmeshIPC
                 _navSetAutoLoad = Service.Interface.GetIpcSubscriber<bool, object>($"{Name}.Nav.SetAutoLoad");
 
                 _queryMeshNearestPoint = Service.Interface.GetIpcSubscriber<Vector3, float, float, Vector3?>($"{Name}.Query.Mesh.NearestPoint");
-                _queryMeshPointOnFloor = Service.Interface.GetIpcSubscriber<Vector3, float, Vector3?>($"{Name}.Query.Mesh.PointOnFloor");
+                _queryMeshPointOnFloor = Service.Interface.GetIpcSubscriber<Vector3, bool, float, Vector3?>($"{Name}.Query.Mesh.PointOnFloor");
+                _queryMeshFurthestPoint = Service.Interface.GetIpcSubscriber<Vector3, float, float, float, Vector3?>($"{Name}.Query.Mesh.FurthestPoint");
 
                 _pathMoveTo = Service.Interface.GetIpcSubscriber<List<Vector3>, bool, object>($"{Name}.Path.MoveTo");
                 _pathStop = Service.Interface.GetIpcSubscriber<object>($"{Name}.Path.Stop");
@@ -88,61 +95,43 @@ internal class NavmeshIPC
     internal static void Execute(Action action)
     {
         if (Utils.HasPlugin(Name))
-        {
-            try
-            {
-                action?.Invoke();
-            }
-            catch (Exception ex) { ex.Log(); }
-        }
+            GenericHelpers.TryExecute(() => action?.Invoke());
     }
 
     internal static void Execute<T>(Action<T> action, T param)
     {
         if (Utils.HasPlugin(Name))
-        {
-            try
-            {
-                action?.Invoke(param);
-            }
-            catch (Exception ex) { ex.Log(); }
-        }
+            GenericHelpers.TryExecute(() => action?.Invoke(param));
     }
 
     internal static void Execute<T1, T2>(Action<T1, T2> action, T1 p1, T2 p2)
     {
         if (Utils.HasPlugin(Name))
-        {
-            try
-            {
-                action?.Invoke(p1, p2);
-            }
-            catch (Exception ex) { ex.Log(); }
-        }
+            GenericHelpers.TryExecute(() => action?.Invoke(p1, p2));
     }
 
-    internal static bool NavIsReady() => Execute(() => _navIsReady!.InvokeFunc());
-    internal static float NavBuildProgress() => Execute(() => _navBuildProgress!.InvokeFunc());
-    internal static void NavReload() => Execute(() => _navReload!.InvokeFunc());
-    internal static void NavRebuild() => Execute(() => _navRebuild!.InvokeFunc());
-    internal static Task<List<Vector3>>? NavPathfind(Vector3 from, Vector3 to, bool fly = false) => Execute(() => _navPathfind!.InvokeFunc(from, to, fly));
-    internal static bool NavIsAutoLoad() => Execute(() => _navIsAutoLoad!.InvokeFunc());
-    internal static void NavSetAutoLoad(bool value) => Execute(_navSetAutoLoad!.InvokeAction, value);
+    internal static bool IsReady() => Execute(() => _navIsReady!.InvokeFunc());
+    internal static float BuildProgress() => Execute(() => _navBuildProgress!.InvokeFunc());
+    internal static void Reload() => Execute(() => _navReload!.InvokeFunc());
+    internal static void Rebuild() => Execute(() => _navRebuild!.InvokeFunc());
+    internal static Task<List<Vector3>>? Pathfind(Vector3 from, Vector3 to, bool fly = false) => Execute(() => _navPathfind!.InvokeFunc(from, to, fly));
+    internal static bool IsAutoLoad() => Execute(() => _navIsAutoLoad!.InvokeFunc());
+    internal static void SetAutoLoad(bool value) => Execute(_navSetAutoLoad!.InvokeAction, value);
 
     internal static Vector3? QueryMeshNearestPoint(Vector3 pos, float halfExtentXZ, float halfExtentY) => Execute(() => _queryMeshNearestPoint!.InvokeFunc(pos, halfExtentXZ, halfExtentY));
-    internal static Vector3? QueryMeshPointOnFloor(Vector3 pos, float halfExtentXZ) => Execute(() => _queryMeshPointOnFloor!.InvokeFunc(pos, halfExtentXZ));
+    internal static Vector3? QueryMeshPointOnFloor(Vector3 pos, bool allowUnlandable, float halfExtentXZ) => Execute(() => _queryMeshPointOnFloor!.InvokeFunc(pos, allowUnlandable, halfExtentXZ));
 
-    internal static void PathMoveTo(List<Vector3> waypoints, bool fly) => Execute(_pathMoveTo!.InvokeAction, waypoints, fly);
-    internal static void PathStop() => Execute(_pathStop!.InvokeAction);
-    internal static bool PathIsRunning() => Execute(() => _pathIsRunning!.InvokeFunc());
-    internal static int PathNumWaypoints() => Execute(() => _pathNumWaypoints!.InvokeFunc());
-    internal static bool PathGetMovementAllowed() => Execute(() => _pathGetMovementAllowed!.InvokeFunc());
-    internal static void PathSetMovementAllowed(bool value) => Execute(_pathSetMovementAllowed!.InvokeAction, value);
-    internal static bool PathGetAlignCamera() => Execute(() => _pathGetAlignCamera!.InvokeFunc());
-    internal static void PathSetAlignCamera(bool value) => Execute(_pathSetAlignCamera!.InvokeAction, value);
-    internal static float PathGetTolerance() => Execute(() => _pathGetTolerance!.InvokeFunc());
-    internal static void PathSetTolerance(float tolerance) => Execute(_pathSetTolerance!.InvokeAction, tolerance);
+    internal static void MoveTo(List<Vector3> waypoints, bool fly) => Execute(_pathMoveTo!.InvokeAction, waypoints, fly);
+    internal static void Stop() => Execute(_pathStop!.InvokeAction);
+    internal static bool IsRunning() => Execute(() => _pathIsRunning!.InvokeFunc());
+    internal static int NumWaypoints() => Execute(() => _pathNumWaypoints!.InvokeFunc());
+    internal static bool GetMovementAllowed() => Execute(() => _pathGetMovementAllowed!.InvokeFunc());
+    internal static void SetMovementAllowed(bool value) => Execute(_pathSetMovementAllowed!.InvokeAction, value);
+    internal static bool GetAlignCamera() => Execute(() => _pathGetAlignCamera!.InvokeFunc());
+    internal static void SetAlignCamera(bool value) => Execute(_pathSetAlignCamera!.InvokeAction, value);
+    internal static float GetTolerance() => Execute(() => _pathGetTolerance!.InvokeFunc());
+    internal static void SetTolerance(float tolerance) => Execute(_pathSetTolerance!.InvokeAction, tolerance);
 
-    internal static void PathfindAndMoveTo(Vector3 pos, bool fly) => Execute(() => _pathfindAndMoveTo!.InvokeFunc(pos, fly));
+    internal static bool PathfindAndMoveTo(Vector3 pos, bool fly) => Execute(() => _pathfindAndMoveTo!.InvokeFunc(pos, fly));
     internal static bool PathfindInProgress() => Execute(() => _pathfindInProgress!.InvokeFunc());
 }

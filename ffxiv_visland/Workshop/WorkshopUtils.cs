@@ -1,7 +1,7 @@
 ﻿using FFXIVClientStructs.FFXIV.Client.Game.MJI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using Lumina.Excel.GeneratedSheets2;
+using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
 using visland.Helpers;
@@ -15,8 +15,8 @@ public static unsafe class WorkshopUtils
     {
         var cycleData = Service.LuminaRow<CycleTime>(2)!;
         var now = DateTimeOffset.Now.ToUnixTimeSeconds();
-        var index = (now - cycleData.FirstCycle) / cycleData.Cycle;
-        var startTime = cycleData.FirstCycle + cycleData.Cycle * index;
+        var index = (now - cycleData.Value.FirstCycle) / cycleData.Value.Cycle;
+        var startTime = cycleData.Value.FirstCycle + cycleData.Value.Cycle * index;
         return (index, DateTime.UnixEpoch.AddSeconds(startTime));
     }
 
@@ -25,7 +25,7 @@ public static unsafe class WorkshopUtils
         var agent = AgentMJICraftSchedule.Instance();
         if (agent == null || agent->Data == null)
             return false;
-        foreach (ref var w in agent->Data->WorkshopSchedulesSpan)
+        foreach (ref var w in agent->Data->WorkshopSchedules)
             if (w.NumScheduleEntries != 0)
                 return false;
         return true;

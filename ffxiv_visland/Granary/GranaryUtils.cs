@@ -1,6 +1,6 @@
 ﻿using FFXIVClientStructs.FFXIV.Client.Game.MJI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
-using Lumina.Excel.GeneratedSheets2;
+using Lumina.Excel.Sheets;
 using System.Runtime.CompilerServices;
 using visland.Helpers;
 
@@ -17,7 +17,7 @@ public static unsafe class GranaryUtils
     public static MJIGranaryState* GetGranaryState(int index)
     {
         var state = State();
-        return state != null ? (MJIGranaryState*)Unsafe.AsPointer(ref state->GranarySpan[index]) : null;
+        return state != null ? (MJIGranaryState*)Unsafe.AsPointer(ref state->Granary[index]) : null;
     }
 
     public static void Collect(int index)
@@ -55,7 +55,7 @@ public static unsafe class GranaryUtils
                 agent->CurActiveDays = gstate->RemainingDays;
                 agent->CurHoveredExpeditionId = agent->CurSelectedExpeditionId = expeditionId;
                 agent->CurSelectedDays = numDays;
-                agent->CurExpeditionName.SetString(agent->Data->Expeditions.Get(expeditionId).Name.ToString());
+                agent->CurExpeditionName.SetString(agent->Data->Expeditions[expeditionId].Name.ToString());
                 agent->ConfirmType = confirm;
                 agent->GranariesState->SelectExpeditionCommit(granaryIndex, expeditionId, numDays);
             }
@@ -68,10 +68,10 @@ public static unsafe class GranaryUtils
         if (gstate == null)
             return CollectResult.NothingToCollect;
 
-        bool haveAnything = gstate->RareResourceCount > 0;
-        bool overcapSome = haveAnything && WillOvercap(gstate->RareResourcePouchId, gstate->RareResourceCount);
-        bool overcapAll = !haveAnything || overcapSome;
-        for (int i = 0; i < MJIGranaryState.MaxNormalResources; ++i)
+        var haveAnything = gstate->RareResourceCount > 0;
+        var overcapSome = haveAnything && WillOvercap(gstate->RareResourcePouchId, gstate->RareResourceCount);
+        var overcapAll = !haveAnything || overcapSome;
+        for (var i = 0; i < gstate->NormalResourceCounts.Length; ++i)
         {
             if (gstate->NormalResourceCounts[i] > 0)
             {
@@ -92,5 +92,5 @@ public static unsafe class GranaryUtils
 
     public static int MaxDays() => Utils.NumCowries() / 50;
 
-    private static bool WillOvercap(uint pouchId, int count) => Utils.NumItems(Service.LuminaRow<MJIItemPouch>(pouchId)!.Item.Row) + count > 999;
+    private static bool WillOvercap(uint pouchId, int count) => Utils.NumItems(Service.LuminaRow<MJIItemPouch>(pouchId)!.Value.Item.RowId) + count > 999;
 }

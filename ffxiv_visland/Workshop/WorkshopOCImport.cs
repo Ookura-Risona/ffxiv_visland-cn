@@ -4,16 +4,22 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Text.RegularExpressions;
+using ECommons;
 using Dalamud;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility;
 using ECommons.ImGuiMethods;
+using FFXIVClientStructs.FFXIV.Client.Game.MJI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using ImGuiNET;
+using Lumina.Data;
 using Lumina.Excel;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 using visland.Helpers;
+using Dalamud.Game;
+using Dalamud.Interface.Components;
+using Dalamud.Interface.Textures;
 
 namespace visland.Workshop;
 
@@ -30,9 +36,10 @@ public unsafe class WorkshopOCImport
     public WorkshopOCImport()
     {
         _config = Service.Config.Get<WorkshopConfig>();
-        _craftSheet = Service.DataManager.GetExcelSheet<MJICraftworksObject>()!;
-        _botNames = _craftSheet.Select(r => OfficialNameToBotName(r.Item.GetDifferentLanguage(ClientLanguage.English).Value?.Name.RawString ?? r.Item.Value?.Name.RawString ?? "")).ToList();
+        _craftSheet = GenericHelpers.GetSheet<MJICraftworksObject>(); // unlocalised sheet can't be fetched in english
+        _botNames = _craftSheet.Select(r => OfficialNameToBotName(GenericHelpers.GetRow<Item>(r.Item.RowId, ClientLanguage.English)!.Value.Name.ExtractText())).ToList();
     }
+
 
     public void Update()
     {
@@ -245,8 +252,7 @@ public unsafe class WorkshopOCImport
                         var iconSize = ImGui.GetTextLineHeight() * 1.5f;
                         var iconSizeVec = new Vector2(iconSize, iconSize);
                         var craftworkItemIcon = _craftSheet.GetRow(rec.CraftObjectId)!.Item.Value!.Icon;
-                        ImGui.Image(Service.TextureProvider.GetIcon(craftworkItemIcon)!.ImGuiHandle, iconSizeVec,
-                            Vector2.Zero, Vector2.One);
+                        ImGui.Image(Service.TextureProvider.GetFromGameIcon(new GameIconLookup(craftworkItemIcon)).GetWrapOrEmpty().ImGuiHandle, iconSizeVec, Vector2.Zero, Vector2.One);
 
                         ImGui.TableNextColumn();
                         ImGui.TextUnformatted(_botNames[(int)rec.CraftObjectId]);

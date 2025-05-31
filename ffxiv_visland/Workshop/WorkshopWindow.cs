@@ -29,13 +29,21 @@ unsafe class WorkshopWindow : UIAttachedWindow
     public override void Draw()
     {
         using var tabs = ImRaii.TabBar("Tabs");
-        if (!tabs) return;
-        using (var tab = ImRaii.TabItem("使用预设"))
-            if (tab)
-                _oc.Draw();
-        using (var tab = ImRaii.TabItem("设置"))
-            if (tab)
-                DrawSettings();
+        if (tabs)
+        {
+            using (var tab = ImRaii.TabItem("使用预设"))
+                if (tab)
+                    _oc.Draw();
+            using (var tab = ImRaii.TabItem("手动添加"))
+                if (tab)
+                    _manual.Draw();
+            using (var tab = ImRaii.TabItem("设置"))
+                if (tab)
+                    DrawSettings();
+            using (var tab = ImRaii.TabItem("调试"))
+                if (tab)
+                    _debug.Draw();
+        }
     }
 
     public override void OnOpen()
@@ -55,6 +63,8 @@ unsafe class WorkshopWindow : UIAttachedWindow
         if (ImGui.Checkbox("开启时自动选择下一周期", ref _config.AutoOpenNextDay))
             _config.NotifyModified();
         if (ImGui.Checkbox("开启窗口时自动尝试导入剪贴板内容", ref _config.AutoImport))
+            _config.NotifyModified();
+        if (ImGui.Checkbox("Use experimental favor solver", ref _config.UseFavorSolver))
             _config.NotifyModified();
     }
 }

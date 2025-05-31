@@ -4,7 +4,7 @@ using FFXIVClientStructs.FFXIV.Client.Game.MJI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using ImGuiNET;
 using Lumina.Data;
-using Lumina.Excel.GeneratedSheets2;
+using Lumina.Excel.Sheets;
 using System.Collections.Generic;
 using System.Linq;
 using visland.Helpers;
@@ -21,19 +21,19 @@ public unsafe class WorkshopDebug
 
     public WorkshopDebug()
     {
-        _itemNames = Service.LuminaGameData.GetExcelSheet<MJICraftworksObject>()!.Select(o => o.Item.Value?.Name ?? "").ToArray();
+        _itemNames = Service.LuminaGameData.GetExcelSheet<MJICraftworksObject>()!.Select(o => o.Item.Value.Name.ToString()).ToArray();
     }
 
     public void Draw()
     {
-        if (ImGui.Button("Clear current cycle"))
+        if (ImGui.Button("清除本日生产计划"))
             WorkshopUtils.ClearCurrentCycleSchedule();
         ImGui.SameLine();
-        if (ImGui.Button("Refresh favors/demand"))
+        if (ImGui.Button("刷新受欢迎度/市场需求"))
             WorkshopUtils.RequestDemandFavors();
 
         var curWeek = WorkshopUtils.CurrentWeek();
-        _tree.LeafNode($"Current week: #{curWeek.index}, started at {curWeek.startTime}");
+        _tree.LeafNode($"本周: #{curWeek.index}, 开始于 {curWeek.startTime}");
 
         var ad = AgentMJICraftSchedule.Instance()->Data;
         var sheet = Service.LuminaGameData.GetExcelSheet<MJICraftworksObject>(Language.English)!;
@@ -49,15 +49,15 @@ public unsafe class WorkshopDebug
             _tree.LeafNode($"flags1={ad->Flags1}");
             _tree.LeafNode($"flags2={ad->Flags2}");
 
-            int i = 0;
-            foreach (ref var w in ad->WorkshopSchedulesSpan)
+            var i = 0;
+            foreach (ref var w in ad->WorkshopSchedules)
                 DrawWorkshopSchedule(ref w, $"Workshop {i++}");
             DrawWorkshopSchedule(ref ad->CopiedSchedule, "Workshop in clipboard");
 
-            foreach (var n in _tree.Node("Raw crafts", ad->Crafts.Size() == 0))
+            foreach (var n in _tree.Node("Raw crafts", ad->Crafts.LongCount == 0))
             {
                 i = 0;
-                foreach (ref readonly var item in ad->Crafts.Span)
+                foreach (ref readonly var item in ad->Crafts.AsSpan())
                 {
                     foreach (var nn in _tree.Node($"Item {i++}: id={item.CraftObjectId} ({item.Name})"))
                     {
@@ -68,47 +68,47 @@ public unsafe class WorkshopDebug
                     }
                 }
             }
-            foreach (var n in _tree.Node("Crafts per theme", ad->ThemeNames.Size() == 0))
+            foreach (var n in _tree.Node("Crafts per theme", ad->ThemeNames.LongCount == 0))
             {
-                for (int j = 0; j < (int)ad->ThemeNames.Size(); ++j)
+                for (var j = 0; j < (int)ad->ThemeNames.LongCount; ++j)
                 {
-                    foreach (var nn in _tree.Node(ad->ThemeNames.Span[j].ToString(), ad->UnlockedObjectsPerThemeSpan[j].Size() == 0))
+                    foreach (var nn in _tree.Node(ad->ThemeNames.AsSpan()[j].ToString(), ad->UnlockedObjectsPerTheme[j].LongCount == 0))
                     {
-                        foreach (ref readonly var item in ad->UnlockedObjectsPerThemeSpan[j].Span)
+                        foreach (ref readonly var item in ad->UnlockedObjectsPerTheme[j].AsSpan())
                         {
-                            _tree.LeafNode($"id={item.Value->CraftObjectId} ({sheet.GetRow(item.Value->CraftObjectId)?.Item.Value?.Name})");
+                            _tree.LeafNode($"id={item.Value->CraftObjectId} ({sheet.GetRow(item.Value->CraftObjectId).Item.Value.Name})");
                         }
                     }
                 }
             }
-            foreach (var n in _tree.Node("Crafts sorted by name", ad->CraftsSortedByName.Size() == 0))
+            foreach (var n in _tree.Node("Crafts sorted by name", ad->CraftsSortedByName.LongCount == 0))
             {
-                foreach (ref readonly var item in ad->CraftsSortedByName.Span)
+                foreach (ref readonly var item in ad->CraftsSortedByName.AsSpan())
                 {
-                    _tree.LeafNode($"id={item.Value->CraftObjectId} ({sheet.GetRow(item.Value->CraftObjectId)?.Item.Value?.Name})");
+                    _tree.LeafNode($"id={item.Value->CraftObjectId} ({sheet.GetRow(item.Value->CraftObjectId).Item.Value.Name})");
                 }
             }
 
             foreach (var n in _tree.Node($"Material allocation for cycle {ad->MaterialUse.Cycle}###matalloc"))
             {
                 foreach (var nn in _tree.Node("Cycle"))
-                    DrawMaterialAlloc(ref ad->MaterialUse.EntriesSpan[0]);
+                    DrawMaterialAlloc(ref ad->MaterialUse.Entries[0]);
                 foreach (var nn in _tree.Node("Week"))
-                    DrawMaterialAlloc(ref ad->MaterialUse.EntriesSpan[1]);
+                    DrawMaterialAlloc(ref ad->MaterialUse.Entries[1]);
                 foreach (var nn in _tree.Node("Week + next"))
-                    DrawMaterialAlloc(ref ad->MaterialUse.EntriesSpan[2]);
+                    DrawMaterialAlloc(ref ad->MaterialUse.Entries[2]);
                 foreach (var nn in _tree.Node("Workshop 1"))
-                    for (int j = 0; j < 6; ++j)
-                        _tree.LeafNode($"{ad->MaterialUse.StartingHours[j]} == {ad->MaterialUse.CraftIds[j]} '{sheet.GetRow(ad->MaterialUse.CraftIds[j])?.Item.Value?.Name}'");
+                    for (var j = 0; j < 6; ++j)
+                        _tree.LeafNode($"{ad->MaterialUse.StartingHours[j]} == {ad->MaterialUse.CraftIds[j]} '{sheet.GetRow(ad->MaterialUse.CraftIds[j]).Item.Value.Name}'");
                 foreach (var nn in _tree.Node("Workshop 2"))
-                    for (int j = 0; j < 6; ++j)
-                        _tree.LeafNode($"{ad->MaterialUse.StartingHours[j + 6]} == {ad->MaterialUse.CraftIds[j + 6]} '{sheet.GetRow(ad->MaterialUse.CraftIds[j + 6])?.Item.Value?.Name}'");
+                    for (var j = 0; j < 6; ++j)
+                        _tree.LeafNode($"{ad->MaterialUse.StartingHours[j + 6]} == {ad->MaterialUse.CraftIds[j + 6]} '{sheet.GetRow(ad->MaterialUse.CraftIds[j + 6]).Item.Value.Name}'");
                 foreach (var nn in _tree.Node("Workshop 3"))
-                    for (int j = 0; j < 6; ++j)
-                        _tree.LeafNode($"{ad->MaterialUse.StartingHours[j + 12]} == {ad->MaterialUse.CraftIds[j + 12]} '{sheet.GetRow(ad->MaterialUse.CraftIds[j + 12])?.Item.Value?.Name}'");
+                    for (var j = 0; j < 6; ++j)
+                        _tree.LeafNode($"{ad->MaterialUse.StartingHours[j + 12]} == {ad->MaterialUse.CraftIds[j + 12]} '{sheet.GetRow(ad->MaterialUse.CraftIds[j + 12]).Item.Value.Name}'");
                 foreach (var nn in _tree.Node("Workshop 4"))
-                    for (int j = 0; j < 6; ++j)
-                        _tree.LeafNode($"{ad->MaterialUse.StartingHours[j + 18]} == {ad->MaterialUse.CraftIds[j + 18]} '{sheet.GetRow(ad->MaterialUse.CraftIds[j + 18])?.Item.Value?.Name}'");
+                    for (var j = 0; j < 6; ++j)
+                        _tree.LeafNode($"{ad->MaterialUse.StartingHours[j + 18]} == {ad->MaterialUse.CraftIds[j + 18]} '{sheet.GetRow(ad->MaterialUse.CraftIds[j + 18]).Item.Value.Name}'");
             }
         }
 
@@ -167,10 +167,10 @@ public unsafe class WorkshopDebug
                 }
                 foreach (var n in _tree.Node($"Solution ({_favorSolution.Recs.Count} cycles)", _favorSolution.Recs.Count == 0))
                 {
-                    int i = 0;
+                    var i = 0;
                     foreach (var r in _tree.Nodes(_favorSolution.Recs, r => new($"Schedule {i++}")))
                     {
-                        _tree.LeafNodes(r.Slots, s => $"{s.Slot}: {s.CraftObjectId} '{sheet.GetRow(s.CraftObjectId)?.Item.Value?.Name}'");
+                        _tree.LeafNodes(r.Slots, s => $"{s.Slot}: {s.CraftObjectId} '{sheet.GetRow(s.CraftObjectId).Item.Value.Name}'");
                     }
                 }
             }
@@ -181,10 +181,10 @@ public unsafe class WorkshopDebug
     {
         foreach (var n in _tree.Node($"{tag}: {w.NumScheduleEntries} entries, {w.NumEfficientCrafts} eff, {w.UsedTimeSlots:X} used", w.NumScheduleEntries == 0))
         {
-            for (int j = 0; j < w.NumScheduleEntries; ++j)
+            for (var j = 0; j < w.NumScheduleEntries; ++j)
             {
-                ref var e = ref w.EntryDataSpan[j];
-                _tree.LeafNode($"Item {j}: {e.CraftObjectId} ({Service.LuminaRow<MJICraftworksObject>(e.CraftObjectId)?.Item.Value?.Name}), flags={e.Flags} startslot={e.StartingSlot}, dur={e.Duration}, started={e.Started}, efficient={e.Efficient}");
+                ref var e = ref w.EntryData[j];
+                _tree.LeafNode($"Item {j}: {e.CraftObjectId} ({Service.LuminaRow<MJICraftworksObject>(e.CraftObjectId)?.Item.Value.Name}), flags={e.Flags} startslot={e.StartingSlot}, dur={e.Duration}, started={e.Started}, efficient={e.Efficient}");
             }
         }
     }
@@ -192,9 +192,9 @@ public unsafe class WorkshopDebug
     private void DrawMaterialAlloc(ref AgentMJICraftSchedule.MaterialAllocationEntry entry)
     {
         _tree.LeafNode($"index={entry.EntryIndex} unk={entry.uDC}");
-        for (int i = 0; i < 109; ++i)
+        for (var i = 0; i < 109; ++i)
             if (entry.UsedAmounts[i] != 0)
-                _tree.LeafNode($"{Service.LuminaRow<MJIItemPouch>((uint)i)?.Item.Value?.Name} = {entry.UsedAmounts[i]}");
+                _tree.LeafNode($"{Service.LuminaRow<MJIItemPouch>((uint)i)?.Item.Value.Name} = {entry.UsedAmounts[i]}");
     }
 
     private void DrawPopularity(string tag, byte index)
@@ -203,7 +203,7 @@ public unsafe class WorkshopDebug
         var pop = Service.LuminaRow<MJICraftworksPopularity>(index)!;
         foreach (var np in _tree.Node($"{tag} popularity={index}"))
         {
-            _tree.LeafNodes(sheetCraft.Where(o => o.RowId > 0), o => $"{o.RowId} '{o.Item.Value?.Name}' = {pop.Popularity[o.RowId].Value?.Ratio}");
+            _tree.LeafNodes(sheetCraft.Where(o => o.RowId > 0), o => $"{o.RowId} '{o.Item.Value.Name}' = {pop.Value.Popularity[o.Value].Value.Ratio}");
         }
     }
 
@@ -212,10 +212,10 @@ public unsafe class WorkshopDebug
         var f = MJIManager.Instance()->FavorState;
         foreach (var n in _tree.Node($"{tag} favor state"))
         {
-            for (int i = 0; i < 3; ++i)
+            for (var i = 0; i < 3; ++i)
             {
                 var idx = f->CraftObjectIds[i + offset];
-                _tree.LeafNode($"{idx} '{Service.LuminaRow<MJICraftworksObject>(idx)?.Item.Value?.Name}': delivered={f->NumDelivered[i + offset]}, scheduled={f->NumScheduled[i + offset]}, bonus={f->Bonus(i + offset)}, shipped={f->Shipped(i + offset)}");
+                _tree.LeafNode($"{idx} '{Service.LuminaRow<MJICraftworksObject>(idx)?.Item.Value.Name}': delivered={f->NumDelivered[i + offset]}, scheduled={f->NumScheduled[i + offset]}, bonus={f->Bonus(i + offset)}, shipped={f->Shipped(i + offset)}");
             }
         }
     }
@@ -225,7 +225,7 @@ public unsafe class WorkshopDebug
         var sheet = Service.LuminaGameData.GetExcelSheet<MJICraftworksObject>()!;
         ImGuiEx.TextV($"{duration}h:");
         ImGui.SameLine();
-        UICombo.UInt($"###c{idx}", _itemNames, ref _favorState.CraftObjectIds[idx], i => i != 0 && sheet.GetRow(i)?.CraftingTime == duration);
+        UICombo.UInt($"###c{idx}", _itemNames, ref _favorState.CraftObjectIds[idx], i => i != 0 && sheet.GetRow(i).CraftingTime == duration);
         ImGui.SameLine();
         ImGui.DragInt($"###r{idx}", ref _favorState.CompletedCounts[idx], 0.03f, 0, req);
     }
@@ -233,7 +233,7 @@ public unsafe class WorkshopDebug
     private void InitFavorsFromGame(int offset, int pop)
     {
         var state = MJIManager.Instance()->FavorState;
-        for (int i = 0; i < 3; ++i)
+        for (var i = 0; i < 3; ++i)
         {
             _favorState.CraftObjectIds[i] = state->CraftObjectIds[i + offset];
             _favorState.CompletedCounts[i] = state->NumDelivered[i + offset] + state->NumScheduled[i + offset];
@@ -246,7 +246,7 @@ public unsafe class WorkshopDebug
 
     private void DrawLinked(MJICraftworksObject obj, int duration, List<MJICraftworksObject> links)
     {
-        foreach (var n in _tree.Node($"{duration}h linked to {obj.CraftingTime}h favor ({obj.Theme[0].Value?.Name}/{obj.Theme[1].Value?.Name})", links.Count == 0))
-            _tree.Nodes(links, o => new($"{o.RowId} '{o.Item.Value?.Name}' {o.Theme[0].Value?.Name}/{o.Theme[1].Value?.Name} == {o.Value * _favorState.Popularity.Multiplier(o.RowId):f1}", true, _favorSolution!.Favors.Contains(o) ? 0xff00ff00 : 0xffffffff)).Count();
+        foreach (var n in _tree.Node($"{duration}h linked to {obj.CraftingTime}h favor ({obj.Theme[0].Value.Name}/{obj.Theme[1].Value.Name})", links.Count == 0))
+            _tree.Nodes(links, o => new($"{o.RowId} '{o.Item.Value.Name}' {o.Theme[0].Value.Name}/{o.Theme[1].Value.Name} == {o.Value * _favorState.Popularity.Multiplier(o.RowId):f1}", true, _favorSolution!.Favors.Contains(o) ? 0xff00ff00 : 0xffffffff)).Count();
     }
 }

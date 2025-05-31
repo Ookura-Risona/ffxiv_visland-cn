@@ -1,22 +1,25 @@
-﻿using Dalamud;
+﻿using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility.Raii;
+using ECommons.DalamudServices;
+using ECommons.ImGuiMethods;
+using ECommons.Reflection;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.System.Framework;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using FFXIVClientStructs.Interop;
 using ImGuiNET;
-using Lumina.Excel;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.IO.Compression;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
 using System.Text;
-using Dalamud.Interface.Components;
-using ECommons.ImGuiMethods;
-using ECommons.Reflection;
 
 namespace visland.Helpers;
 
@@ -32,14 +35,25 @@ public static unsafe class Utils
         return new Vector4(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
     }
 
+    public static uint ToHex(this Vector4 color)
+    {
+        var r = (byte)(color.X * 255);
+        var g = (byte)(color.Y * 255);
+        var b = (byte)(color.Z * 255);
+        var a = (byte)(color.W * 255);
+        return (uint)(a << 24 | b << 16 | g << 8 | r);
+    }
+
+    public static Vector2 ToVec2(this (int, int) tuple) => new(tuple.Item1, tuple.Item2);
+
     public static bool HasPlugin(string name) => DalamudReflector.TryGetDalamudPlugin(name, out var _, false, true);
 
     // item (button, menu item, etc.) that is disabled unless shift is held, useful for 'dangerous' operations like deletion
     public static bool DangerousItem(Func<bool> item)
     {
-        bool disabled = !ImGui.IsKeyDown(ImGuiKey.ModShift);
+        var disabled = !ImGui.IsKeyDown(ImGuiKey.ModShift);
         ImGui.BeginDisabled(disabled);
-        bool res = item();
+        var res = item();
         ImGui.EndDisabled();
         if (disabled && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             ImGui.SetTooltip("Hold shift");
@@ -48,13 +62,26 @@ public static unsafe class Utils
     public static bool DangerousButton(string label) => DangerousItem(() => ImGui.Button(label));
     public static bool DangerousMenuItem(string label) => DangerousItem(() => ImGui.MenuItem(label));
 
+    private static Vector2 size = new(24);
+    public static void WorkInProgressIcon()
+    {
+        const uint iconID = 60073;
+        var texture = Svc.Texture?.GetFromGameIcon(iconID).GetWrapOrEmpty();
+        if (texture != null)
+            ImGui.Image(texture.ImGuiHandle, size);
+        else
+            ImGui.Dummy(size);
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Work in progress");
+    }
+
     private static float startTime;
     public static void FlashText(string text, Vector4 colour1, Vector4 colour2, float duration)
     {
-        float currentTime = (float)ImGui.GetTime();
-        float elapsedTime = currentTime - startTime;
+        var currentTime = (float)ImGui.GetTime();
+        var elapsedTime = currentTime - startTime;
 
-        float t = (float)Math.Sin(elapsedTime / duration * Math.PI * 2) * 0.5f + 0.5f;
+        var t = (float)Math.Sin(elapsedTime / duration * Math.PI * 2) * 0.5f + 0.5f;
 
         // Interpolate the color difference
         Vector4 interpolatedColor = new(
@@ -71,6 +98,26 @@ public static unsafe class Utils
         if (elapsedTime >= duration)
         {
             startTime = currentTime;
+        }
+    }
+
+    public static void DrawSection(string Label, Vector4 colour, bool PushDown = true, bool drawSeparator = true)
+    {
+        var style = ImGui.GetStyle();
+
+        // push down a bit
+        if (PushDown)
+            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + style.ItemSpacing.Y * 2);
+
+        using (ImRaii.PushColor(ImGuiCol.Text, colour))
+            ImGui.TextUnformatted(Label);
+
+        if (drawSeparator)
+        {
+            // pull up the separator
+            ImGui.SetCursorPosY(ImGui.GetCursorPosY() - style.ItemSpacing.Y + 3);
+            ImGui.Separator();
+            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + style.ItemSpacing.Y * 2 - 1);
         }
     }
 
@@ -91,12 +138,7 @@ public static unsafe class Utils
     public static void SortByReverse<TValue, TKey>(this List<TValue> list, Func<TValue, TKey> proj) where TKey : notnull, IComparable => list.Sort((l, r) => proj(r).CompareTo(proj(l)));
 
     // swap two values
-    public static void Swap<T>(ref T l, ref T r)
-    {
-        var t = l;
-        l = r;
-        r = t;
-    }
+    public static void Swap<T>(ref T l, ref T r) => (r, l) = (l, r);
 
     // get all types defined in specified assembly
     public static IEnumerable<Type?> GetAllTypes(Assembly asm)
@@ -138,14 +180,34 @@ public static unsafe class Utils
         }
     }
 
-    public static string FromCompressedBase64(this string compressedBase64)
+    public static (bool IsBase64, string Json) FromCompressedBase64(this string compressedBase64)
     {
-        var data = Convert.FromBase64String(compressedBase64);
-        using var compressedStream = new MemoryStream(data);
-        using var zipStream = new GZipStream(compressedStream, CompressionMode.Decompress);
-        using var resultStream = new MemoryStream();
-        zipStream.CopyTo(resultStream);
-        return Encoding.UTF8.GetString(resultStream.ToArray());
+        try
+        {
+            var data = Convert.FromBase64String(compressedBase64);
+            using var compressedStream = new MemoryStream(data);
+            using var zipStream = new GZipStream(compressedStream, CompressionMode.Decompress);
+            using var resultStream = new MemoryStream();
+            zipStream.CopyTo(resultStream);
+            return (true, Encoding.UTF8.GetString(resultStream.ToArray()));
+        }
+        catch (FormatException)
+        {
+            return (false, string.Empty);
+        }
+    }
+
+    public static bool IsJson(string text)
+    {
+        try
+        {
+            JToken.Parse(text);
+            return true;
+        }
+        catch (JsonReaderException)
+        {
+            return false;
+        }
     }
 
     public static bool EditNumberField(string labelBefore, float fieldWidth, ref int refValue, string labelAfter = "", string helpText = "")
@@ -169,12 +231,26 @@ public static unsafe class Utils
 
         return clicked;
     }
+
+    public static int EorzeanHour() => DateTimeOffset.FromUnixTimeSeconds(Framework.Instance()->ClientTime.EorzeaTime).Hour;
+    public static int EorzeanMinute() => DateTimeOffset.FromUnixTimeSeconds(Framework.Instance()->ClientTime.EorzeaTime).Minute;
 }
 
-public static class LazyRowExtensions
+public static class Extensions
 {
-    public static LazyRow<T> GetDifferentLanguage<T>(this LazyRow<T> row, ClientLanguage language) where T : ExcelRow
-    {
-        return new LazyRow<T>(Service.DataManager.GameData, row.Row, language.ToLumina());
-    }
+    //public static string GetItemName(this ILazyRow row)
+    //{
+    //    if (Utils.GetSheet<Item>()!.HasRow(row.Row))
+    //        return (Utils.GetRow<Item>(row.Row)!.Name);
+    //    return Utils.GetSheet<EventItem>()!.HasRow(row.Row) ? Utils.GetRow<EventItem>(row.Row)!.Name : "";
+    //}
+
+    //public static string GetGatheringItem(this ILazyRow row)
+    //{
+    //    if (Utils.GetSheet<GatheringItem>()!.HasRow(row.Row))
+    //        return Utils.GetRow<Item>((uint)Utils.GetRow<GatheringItem>(row.Row)!.Item)!.Name;
+    //    return Utils.GetSheet<SpearfishingItem>()!.HasRow(row.Row) ? Utils.GetRow<SpearfishingItem>(row.Row)!.Item.GetItemName() : row.Row.ToString();
+    //}
+
+    public static int ToUnixTimestamp(this DateTime value) => (int)Math.Truncate(value.ToUniversalTime().Subtract(new DateTime(1970, 1, 1)).TotalSeconds);
 }

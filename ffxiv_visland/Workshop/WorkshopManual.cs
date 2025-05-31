@@ -1,6 +1,6 @@
 ﻿using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using ImGuiNET;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
 
@@ -17,7 +17,7 @@ public class WorkshopManual
         var sheetCraft = Service.LuminaGameData.GetExcelSheet<MJICraftworksObject>()!;
         foreach (var row in sheetCraft)
         {
-            var name = row.Item.Value?.Name.ToString() ?? "";
+            var name = row.Item.Value.Name.ToString() ?? "";
             if (name.Length == 0 || !name.Contains(_filter, StringComparison.InvariantCultureIgnoreCase))
                 continue;
             DrawRowCraft(row, false);
@@ -33,7 +33,7 @@ public class WorkshopManual
 
     private void DrawRowCraft(MJICraftworksObject row, bool fromRecent)
     {
-        var name = row.Item.Value?.Name.ToString() ?? "???";
+        var name = row.Item.Value.Name.ToString() ?? "???";
         ImGui.PushID((int)row.RowId * 2 + (fromRecent ? 1 : 0));
         if (ImGui.Button("+1"))
             AddToSchedule(row, 1);
@@ -59,7 +59,7 @@ public class WorkshopManual
 
     private void AddToSchedule(MJICraftworksObject row, int workshopIndices)
     {
-        for (int i = 0; i < 4; ++i)
+        for (var i = 0; i < 4; ++i)
             if ((workshopIndices & 1 << i) != 0)
                 AddToScheduleSingle(row, i);
         WorkshopUtils.ResetCurrentCycleToRefreshUI();
@@ -71,9 +71,9 @@ public class WorkshopManual
     {
         var agentData = AgentMJICraftSchedule.Instance()->Data;
         var slotMask = (1u << row.CraftingTime) - 1;
-        int startingCycle = 0;
-        int maxCycle = 24 - row.CraftingTime;
-        var usedMask = agentData->WorkshopSchedulesSpan[workshopIndex].UsedTimeSlots;
+        var startingCycle = 0;
+        var maxCycle = 24 - row.CraftingTime;
+        var usedMask = agentData->WorkshopSchedules[workshopIndex].UsedTimeSlots;
         while ((usedMask & slotMask << startingCycle) != 0 && startingCycle <= maxCycle)
             ++startingCycle;
         if (startingCycle > maxCycle)
