@@ -4,10 +4,8 @@ using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
-using Dalamud.Utility;
 using ECommons;
 using ECommons.DalamudServices;
-using ECommons.ExcelServices;
 using ECommons.ImGuiMethods;
 using ECommons.Logging;
 using ECommons.SimpleGui;
@@ -38,7 +36,7 @@ public class GatherWindow : Window, IDisposable
     private int selectedRouteIndex = -1;
     public static bool loop;
 
-    private readonly List<uint> Colours = GenericHelpers.GetSheet<UIColor>()!.Select(x => x.UIForeground).ToList();
+    private readonly List<uint> Colours = GenericHelpers.GetSheet<UIColor>()!.Select(x => x.Dark).ToList();
     private Vector4 greenColor = new Vector4(0x5C, 0xB8, 0x5C, 0xFF) / 0xFF;
     private Vector4 redColor = new Vector4(0xD9, 0x53, 0x4F, 0xFF) / 0xFF;
     private Vector4 yellowColor = new Vector4(0xD9, 0xD9, 0x53, 0xFF) / 0xFF;
@@ -99,9 +97,6 @@ public class GatherWindow : Window, IDisposable
                         a();
                     _postDraw.Clear();
                 }
-            //using (var tab = ImRaii.TabItem("Shopping"))
-            //    if (tab)
-            //        _autoGather.Draw();
             using (var tab = ImRaii.TabItem("日志"))
                 if (tab)
                     InternalLog.PrintImgui();
@@ -158,7 +153,7 @@ public class GatherWindow : Window, IDisposable
             if (ImGuiComponents.IconButton(FontAwesomeIcon.FileImport))
                 TryImport(RouteDB);
             if (ImGui.IsItemHovered())
-                ImGui.SetTooltip("从剪贴板导入路线\");\n");
+                ImGui.SetTooltip("从剪贴板导入路线\n");
 
             ImGui.SameLine();
             if (ImGuiComponents.IconButton(FontAwesomeIcon.Cog))
@@ -271,7 +266,7 @@ public class GatherWindow : Window, IDisposable
             ImGui.SameLine();
             if (ImGui.Checkbox("自动采集", ref RouteDB.AutoGather))
                 RouteDB.NotifyModified();
-            ImGuiComponents.HelpMarker($"Applies to non-island routes only. Will auto gather the item in the \"Item Target\" field and use the best actions available.");
+            ImGuiComponents.HelpMarker($"仅适用于非无人岛路线。将自动收集“目标物品”选项中的物品，并使用可用的最佳操作。");
 
             //if (ImGui.SliderInt("Land Distance", ref RouteDB.LandDistance, 1, 30))
             //    RouteDB.NotifyModified();
@@ -291,7 +286,7 @@ public class GatherWindow : Window, IDisposable
             if (ImGui.Checkbox("运行路线时检查 AutoRetainer", ref RouteDB.AutoRetainerIntegration))
                 RouteDB.NotifyModified();
             ImGuiComponents.HelpMarker($"Will enable multi mode when you have any retainers or submarines returned across any enabled characters. Requires the current character to be set as the Preferred Character and the Teleport to FC config enabled in AutoRetainer.");
-            if (ExcelCombos.ExcelSheetCombo("##Foods", out Item i, _ => $"[{RouteDB.GlobalFood}] {GenericHelpers.GetRow<Item>((uint)RouteDB.GlobalFood)?.Name}", x => $"[{x.RowId}] {x.Name}", x => x.ItemUICategory.RowId == 46))
+            if (ImGuiEx.ExcelSheetCombo("##Foods", out Item i, _ => $"[{RouteDB.GlobalFood}] {GenericHelpers.GetRow<Item>((uint)RouteDB.GlobalFood)?.Name}", x => $"[{x.RowId}] {x.Name}", x => x.ItemUICategory.RowId == 46))
             {
                 RouteDB.GlobalFood = (int)i.RowId;
                 RouteDB.NotifyModified();
@@ -422,7 +417,7 @@ public class GatherWindow : Window, IDisposable
             {
                 ImGuiEx.TextV("目标物品: ");
                 ImGui.SameLine();
-                if (ExcelCombos.ExcelSheetCombo("##Gatherables", out GatheringItem gatherable, _ => $"[{route.TargetGatherItem}] {GenericHelpers.GetRow<Item>((uint)route.TargetGatherItem)?.Name.ToString()}", x => $"[{x.RowId}] {GenericHelpers.GetRow<Item>(x.Item.RowId)?.Name.ToString()}", x => x.Item.RowId != 0))
+                if (ImGuiEx.ExcelSheetCombo("##Gatherables", out GatheringItem gatherable, _ => $"[{route.TargetGatherItem}] {GenericHelpers.GetRow<Item>((uint)route.TargetGatherItem)?.Name.ToString()}", x => $"[{x.RowId}] {GenericHelpers.GetRow<Item>(x.Item.RowId)?.Name.ToString()}", x => x.Item.RowId != 0))
                 {
                     route.TargetGatherItem = (int)gatherable.Item.RowId;
                     RouteDB.NotifyModified();
@@ -461,7 +456,7 @@ public class GatherWindow : Window, IDisposable
         if (!popup) return;
 
         Utils.DrawSection("路线设置", ImGuiColors.ParsedGold);
-        if (ExcelCombos.ExcelSheetCombo("##Foods", out Item i, _ => $"[{route.Food}] {GenericHelpers.GetRow<Item>((uint)route.Food)?.Name}", x => $"[{x.RowId}] {x.Name}", x => x.ItemUICategory.RowId == 46))
+        if (ImGuiEx.ExcelSheetCombo("##Foods", out Item i, _ => $"[{route.Food}] {GenericHelpers.GetRow<Item>((uint)route.Food)?.Name}", x => $"[{x.RowId}] {x.Name}", x => x.ItemUICategory.RowId == 46))
         {
             route.Food = (int)i.RowId;
             RouteDB.NotifyModified();
